@@ -13,3 +13,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see
 # <http://www.gnu.org/licenses/>.
+
+import unittest2
+
+
+class TestCase(unittest2.TestCase):
+    pass
