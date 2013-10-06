@@ -1,0 +1,2 @@
+include COPYING README.rst requirements.txt test-requirements.txt tox.ini
+recursive-include tests *.py
