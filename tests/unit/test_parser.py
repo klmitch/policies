@@ -159,6 +159,14 @@ class TestParseRule(tests.TestCase):
         ('a if b else c', Instructions([
             Ident('b'), Ident('a'), Ident('c'), trinary_op, set_authz
         ])),
+        ('a + b * c + d', Instructions([
+            Ident('a'), Ident('b'), Ident('c'), mul_op, add_op, Ident('d'),
+            add_op, set_authz,
+        ])),
+        ('a * b + c * d', Instructions([
+            Ident('a'), Ident('b'), mul_op, Ident('c'), Ident('d'), mul_op,
+            add_op, set_authz,
+        ])),
         ('{}', Instructions([Constant(frozenset()), set_authz])),
         ('{,}', Instructions([Constant(frozenset()), set_authz])),
         ('{a}', Instructions([Ident('a'), SetOperator(1), set_authz])),
