@@ -23,9 +23,12 @@ from policies import instructions
 import tests
 
 
-class InstructionForTest(instructions.Instruction):
+class InstructionForTest(instructions.AbstractInstruction):
     def __call__(self, ctxt):
         pass
+
+    def __repr__(self):
+        return ''
 
     def __hash__(self, *elems):
         return super(InstructionForTest, self).__hash__(*elems)
@@ -38,7 +41,7 @@ class Instruction2ForTest(InstructionForTest):
     pass
 
 
-class TestInstruction(tests.TestCase):
+class TestAbstractInstruction(tests.TestCase):
     def test_eq(self):
         one = InstructionForTest()
         two = InstructionForTest()
@@ -63,11 +66,86 @@ class TestInstruction(tests.TestCase):
                          hash((InstructionForTest, 1, 2, 3)))
 
 
+class TestInstructions(tests.TestCase):
+    @mock.patch.object(instructions.Instructions, '_linearize',
+                       return_value=[1, 2, 3])
+    def test_init(self, mock_linearize):
+        insts = instructions.Instructions([3, 2, 1])
+
+        self.assertEqual(insts.instructions, (1, 2, 3))
+        mock_linearize.assert_called_once_with([3, 2, 1])
+
+    @mock.patch.object(instructions.Instructions, '_linearize',
+                       side_effect=lambda x: x)
+    def test_repr(self, mock_linearize):
+        insts = instructions.Instructions([1, 2, 3])
+
+        self.assertEqual(repr(insts), 'Instructions((1, 2, 3))')
+
+    @mock.patch.object(instructions.Instructions, '_linearize',
+                       side_effect=lambda x: x)
+    def test_call(self, mock_linearize):
+        calls_obj = mock.Mock()
+        insts = instructions.Instructions([calls_obj.one, calls_obj.two,
+                                           calls_obj.three, calls_obj.four])
+
+        insts('ctxt')
+
+        calls_obj.assert_has_calls([
+            mock.call.one('ctxt'),
+            mock.call.two('ctxt'),
+            mock.call.three('ctxt'),
+            mock.call.four('ctxt'),
+        ])
+
+    @mock.patch.object(instructions.Instructions, '_linearize',
+                       side_effect=lambda x: x)
+    def test_hash(self, mock_linearize):
+        insts = instructions.Instructions([1, 2, 3])
+
+        self.assertEqual(hash(insts),
+                         hash((instructions.Instructions, 1, 2, 3)))
+
+    @mock.patch.object(instructions.Instructions, '_linearize',
+                       side_effect=lambda x: x)
+    def test_eq(self, mock_linearize):
+        class Instructions2(instructions.Instructions):
+            pass
+
+        insts1 = instructions.Instructions([1, 2, 3])
+        insts2 = instructions.Instructions([1, 2, 3])
+        insts3 = instructions.Instructions([3, 2, 1])
+        insts4 = Instructions2([1, 2, 3])
+
+        self.assertTrue(insts1.__eq__(insts2))
+        self.assertFalse(insts1.__eq__(insts3))
+        self.assertFalse(insts1.__eq__(insts4))
+
+    def test_linearize(self):
+        with mock.patch.object(instructions.Instructions, '_linearize',
+                               side_effect=lambda x: x):
+            insts1 = instructions.Instructions([1, 2, 3])
+            insts2 = instructions.Instructions(['a', 'b', 'c'])
+            insts3 = instructions.Instructions([insts2, 'd', 'e'])
+        feed = [9, 8, insts1, 7, 6, insts3, 5, 4]
+
+        result = list(instructions.Instructions._linearize(feed))
+
+        self.assertEqual(result, [
+            9, 8, 1, 2, 3, 7, 6, 'a', 'b', 'c', 'd', 'e', 5, 4
+        ])
+
+
 class TestConstant(tests.TestCase):
     def test_init(self):
         constant = instructions.Constant('value')
 
         self.assertEqual(constant.value, 'value')
+
+    def test_repr(self):
+        constant = instructions.Constant('value')
+
+        self.assertEqual(repr(constant), "Constant('value')")
 
     def test_call(self):
         ctxt = mock.Mock(stack=[])
@@ -103,6 +181,11 @@ class TestAttribute(tests.TestCase):
 
         self.assertEqual(attribute.attribute, 'attr')
 
+    def test_repr(self):
+        attribute = instructions.Attribute('attr')
+
+        self.assertEqual(repr(attribute), "Attribute('attr')")
+
     def test_call(self):
         ctxt = mock.Mock(stack=[mock.Mock(attr='value')])
         attribute = instructions.Attribute('attr')
@@ -136,6 +219,11 @@ class TestIdent(tests.TestCase):
         ident = instructions.Ident('ident')
 
         self.assertEqual(ident.ident, 'ident')
+
+    def test_repr(self):
+        ident = instructions.Ident('ident')
+
+        self.assertEqual(repr(ident), "Ident('ident')")
 
     def test_call(self):
         ctxt = mock.Mock(**{
@@ -179,13 +267,19 @@ class Operator2ForTest(OperatorForTest):
 
 class TestOperator(tests.TestCase):
     def test_init(self):
-        op = OperatorForTest(5)
+        op = OperatorForTest(5, 'opstr')
 
         self.assertEqual(op.count, 5)
+        self.assertEqual(op.opstr, 'opstr')
+
+    def test_repr(self):
+        op = OperatorForTest(5, 'opstr')
+
+        self.assertEqual(repr(op), "OperatorForTest(5, 'opstr')")
 
     def test_call(self):
         ctxt = mock.Mock(stack=[1, 2, 3, 4, 5])
-        op = OperatorForTest(3)
+        op = OperatorForTest(3, 'opstr')
 
         op(ctxt)
 
@@ -193,7 +287,7 @@ class TestOperator(tests.TestCase):
 
     def test_hash(self):
         op_func = lambda x: x
-        op = OperatorForTest(5)
+        op = OperatorForTest(5, 'opstr')
 
         self.assertEqual(hash(op),
                          hash((OperatorForTest, 5)))
@@ -201,10 +295,10 @@ class TestOperator(tests.TestCase):
                          hash((OperatorForTest, 5, op_func)))
 
     def test_eq(self):
-        op1 = OperatorForTest(5)
-        op2 = OperatorForTest(5)
-        op3 = OperatorForTest(3)
-        op4 = Operator2ForTest(5)
+        op1 = OperatorForTest(5, 'op1')
+        op2 = OperatorForTest(5, 'op2')
+        op3 = OperatorForTest(3, 'op3')
+        op4 = Operator2ForTest(5, 'op4')
 
         self.assertTrue(op1.__eq__(op2))
         self.assertFalse(op1.__eq__(op3))
@@ -212,31 +306,36 @@ class TestOperator(tests.TestCase):
 
     def test_fold_constant(self):
         elems = [instructions.Constant(i) for i in range(3)]
-        op = OperatorForTest(3)
+        op = OperatorForTest(3, 'opstr')
 
         result = op.fold(elems)
 
-        self.assertEqual(result, [tuple(elems)])
+        self.assertEqual(len(result), 1)
+        self.assertTrue(isinstance(result[0], instructions.Constant))
+        self.assertEqual(result[0].value, tuple(i.value for i in elems))
 
     def test_fold_nonconstant(self):
         elems = [instructions.Constant(i) for i in range(2)]
         elems += [instructions.Ident('spam')]
-        op = OperatorForTest(3)
+        op = OperatorForTest(3, 'opstr')
 
         result = op.fold(elems)
 
-        self.assertEqual(result, elems + [op])
+        self.assertEqual(len(result), 1)
+        self.assertTrue(isinstance(result[0], instructions.Instructions))
+        self.assertEqual(result[0].instructions, tuple(elems + [op]))
 
 
 class TestGenericOperator(tests.TestCase):
     def test_init(self):
-        gen_op = instructions.GenericOperator(3, 'op')
+        gen_op = instructions.GenericOperator(3, 'op', 'opstr')
 
         self.assertEqual(gen_op.count, 3)
+        self.assertEqual(gen_op.opstr, 'opstr')
         self.assertEqual(gen_op._op, 'op')
 
     def test_hash(self):
-        gen_op = instructions.GenericOperator(3, 'op')
+        gen_op = instructions.GenericOperator(3, 'op', 'opstr')
 
         self.assertEqual(hash(gen_op),
                          hash((instructions.GenericOperator, 3, 'op')))
@@ -245,11 +344,11 @@ class TestGenericOperator(tests.TestCase):
         class GenericOperator2(instructions.GenericOperator):
             pass
 
-        gen_op1 = instructions.GenericOperator(3, 'op')
-        gen_op2 = instructions.GenericOperator(3, 'op')
-        gen_op3 = instructions.GenericOperator(2, 'op')
-        gen_op4 = instructions.GenericOperator(3, 'other')
-        gen_op5 = GenericOperator2(3, 'op')
+        gen_op1 = instructions.GenericOperator(3, 'op', 'op1')
+        gen_op2 = instructions.GenericOperator(3, 'op', 'op2')
+        gen_op3 = instructions.GenericOperator(2, 'op', 'op3')
+        gen_op4 = instructions.GenericOperator(3, 'other', 'op4')
+        gen_op5 = GenericOperator2(3, 'op', 'op5')
 
         self.assertTrue(gen_op1.__eq__(gen_op2))
         self.assertFalse(gen_op1.__eq__(gen_op3))
@@ -258,7 +357,7 @@ class TestGenericOperator(tests.TestCase):
 
     def test_op(self):
         op = mock.Mock(return_value='value')
-        gen_op = instructions.GenericOperator(3, op)
+        gen_op = instructions.GenericOperator(3, op, 'opstr')
 
         result = gen_op.op(1, 2, 3)
 
@@ -271,10 +370,17 @@ class TestSetOperator(tests.TestCase):
         set_op = instructions.SetOperator(5)
 
         self.assertEqual(set_op.count, 5)
+        self.assertEqual(set_op.opstr, 'set')
         self.assertEqual(set_op._op, frozenset)
 
 
 class TestCallOperator(tests.TestCase):
+    def test_init(self):
+        call_op = instructions.CallOperator(5)
+
+        self.assertEqual(call_op.count, 5)
+        self.assertEqual(call_op.opstr, 'call')
+
     def test_op(self):
         func = mock.Mock(return_value='value')
         call_op = instructions.CallOperator(5)
@@ -290,7 +396,9 @@ class TestCallOperator(tests.TestCase):
 
         result = call_op.fold(elems)
 
-        self.assertEqual(result, elems + [call_op])
+        self.assertEqual(len(result), 1)
+        self.assertTrue(isinstance(result[0], instructions.Instructions))
+        self.assertEqual(result[0].instructions, tuple(elems + [call_op]))
 
 
 class TestInOperator(tests.TestCase):

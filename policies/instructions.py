@@ -18,7 +18,8 @@ import abc
 import operator
 
 
-__all__ = ['Constant', 'Attribute', 'Ident', 'SetOperator', 'CallOperator',
+__all__ = ['Instructions',
+           'Constant', 'Attribute', 'Ident', 'SetOperator', 'CallOperator',
            'inv_op', 'pos_op', 'neg_op', 'not_op',
            'pow_op', 'mul_op', 'true_div_op', 'floor_div_op', 'mod_op',
            'add_op', 'sub_op', 'left_shift_op', 'right_shift_op',
@@ -27,7 +28,7 @@ __all__ = ['Constant', 'Attribute', 'Ident', 'SetOperator', 'CallOperator',
            'eq_op', 'and_op', 'or_op', 'item_op', 'trinary_op']
 
 
-class Instruction(object):
+class AbstractInstruction(object):
     """
     An instruction is a callable that manipulates the evaluation
     context.  A sequence of instructions describes how to evaluate an
@@ -41,13 +42,25 @@ class Instruction(object):
         """
         Compare two instructions for inequivalence.
 
-        :param other: Another ``Instruction`` to compare to.
+        :param other: Another ``AbstractInstruction`` to compare to.
 
         :returns: A ``False`` value if the ``other`` instruction is
                   equivalent to this one, ``True`` otherwise.
         """
 
         return not self.__eq__(other)
+
+    @abc.abstractmethod
+    def __repr__(self):
+        """
+        Return a representation of this instruction.  Should provide
+        enough information for a user to understand what operation
+        will be performed.
+
+        :returns: A string representation of this instruction.
+        """
+
+        pass  # pragma: nocover
 
     @abc.abstractmethod
     def __call__(self, ctxt):
@@ -77,7 +90,7 @@ class Instruction(object):
         """
         Compare two instructions for equivalence.
 
-        :param other: Another ``Instruction`` to compare to.
+        :param other: Another ``AbstractInstruction`` to compare to.
 
         :returns: A ``True`` value if the ``other`` instruction is
                   equivalent to this one, ``False`` otherwise.
@@ -86,7 +99,92 @@ class Instruction(object):
         return self.__class__ is other.__class__
 
 
-class Constant(Instruction):
+class Instructions(AbstractInstruction):
+    """
+    A special instruction that actually consists of a list of
+    instructions.  This is needed for collapsing token lists in the
+    parser, and also serves as the return value for the expression
+    parser.
+    """
+
+    def __init__(self, instructions):
+        """
+        Initialize an ``Instructions`` object.
+
+        :param instructions: A sequence of the instructions to be
+                             contained by the ``Instructions`` object.
+        """
+
+        # Linearize the instructions into a flat tuple
+        self.instructions = tuple(self._linearize(instructions))
+
+    def __repr__(self):
+        """
+        Return a representation of this instruction.  Should provide
+        enough information for a user to understand what operation
+        will be performed.
+
+        :returns: A string representation of this instruction.
+        """
+
+        return "Instructions(%r)" % (self.instructions,)
+
+    def __call__(self, ctxt):
+        """
+        Evaluate this instruction.  Executes the contained
+        instructions in sequence.
+
+        :param ctxt: The evaluation context.
+        """
+
+        for inst in self.instructions:
+            inst(ctxt)
+
+    def __hash__(self):
+        """
+        Return a hash value for this instruction.
+
+        :returns: The hash value.
+        """
+
+        return super(Instructions, self).__hash__(*self.instructions)
+
+    def __eq__(self, other):
+        """
+        Compare two instructions for equivalence.
+
+        :param other: Another ``AbstractInstruction`` to compare to.
+
+        :returns: A ``True`` value if the ``other`` instruction is
+                  equivalent to this one, ``False`` otherwise.
+        """
+
+        return (super(Instructions, self).__eq__(other) and
+                self.instructions == other.instructions)
+
+    @classmethod
+    def _linearize(cls, inst_list):
+        """
+        A generator function which performs linearization of the list
+        of instructions; that is, each instruction which should be
+        executed will be yielded in turn, recursing into
+        ``Instructions`` instances that appear in the list.
+
+        :param inst_list: A list (or other sequence) of instructions.
+
+        :returns: An iterator which returns all instructions.
+        """
+
+        for inst in inst_list:
+            # Check if we need to recurse
+            if isinstance(inst, Instructions):
+                for sub_inst in cls._linearize(inst.instructions):
+                    yield sub_inst
+            else:
+                yield inst
+
+
+class Constant(AbstractInstruction):
     """
     An instruction that pushes a constant value onto the evaluation
     context stack.
@@ -94,12 +192,23 @@ class Constant(Instruction):
 
     def __init__(self, value):
         """
-        Initialize a ``Constant``.
+        Initialize a ``Constant`` object.
 
         :param value: The value of the constant.
         """
 
         self.value = value
+
+    def __repr__(self):
+        """
+        Return a representation of this instruction.  Should provide
+        enough information for a user to understand what operation
+        will be performed.
+
+        :returns: A string representation of this instruction.
+        """
+
+        return "Constant(%r)" % (self.value,)
 
     def __call__(self, ctxt):
         """
@@ -124,7 +233,7 @@ class Constant(Instruction):
         """
         Compare two instructions for equivalence.
 
-        :param other: Another ``Instruction`` to compare to.
+        :param other: Another ``AbstractInstruction`` to compare to.
 
         :returns: A ``True`` value if the ``other`` instruction is
                   equivalent to this one, ``False`` otherwise.
@@ -134,7 +243,7 @@ class Constant(Instruction):
                 self.value == other.value)
 
 
-class Attribute(Instruction):
+class Attribute(AbstractInstruction):
     """
     An instruction that replaces the top of the evaluation context
     stack with one of its attributes.
@@ -142,12 +251,23 @@ class Attribute(Instruction):
 
     def __init__(self, attribute):
         """
-        Initialize an ``Attribute``.
+        Initialize an ``Attribute`` object.
 
         :param attribute: The name of the attribute.
         """
 
         self.attribute = attribute
+
+    def __repr__(self):
+        """
+        Return a representation of this instruction.  Should provide
+        enough information for a user to understand what operation
+        will be performed.
+
+        :returns: A string representation of this instruction.
+        """
+
+        return "Attribute(%r)" % (self.attribute,)
 
     def __call__(self, ctxt):
         """
@@ -173,7 +293,7 @@ class Attribute(Instruction):
         """
         Compare two instructions for equivalence.
 
-        :param other: Another ``Instruction`` to compare to.
+        :param other: Another ``AbstractInstruction`` to compare to.
 
         :returns: A ``True`` value if the ``other`` instruction is
                   equivalent to this one, ``False`` otherwise.
@@ -183,7 +303,7 @@ class Attribute(Instruction):
                 self.attribute == other.attribute)
 
 
-class Ident(Instruction):
+class Ident(AbstractInstruction):
     """
     An instruction that resolves an identifier into a value and pushes
     that value onto the evaluation context stack.
@@ -191,12 +311,23 @@ class Ident(Instruction):
 
     def __init__(self, ident):
         """
-        Initialize an ``Ident``.
+        Initialize an ``Ident`` object.
 
         :param ident: The identifier.
         """
 
         self.ident = ident
+
+    def __repr__(self):
+        """
+        Return a representation of this instruction.  Should provide
+        enough information for a user to understand what operation
+        will be performed.
+
+        :returns: A string representation of this instruction.
+        """
+
+        return "Ident(%r)" % (self.ident,)
 
     def __call__(self, ctxt):
         """
@@ -222,7 +353,7 @@ class Ident(Instruction):
         """
         Compare two instructions for equivalence.
 
-        :param other: Another ``Instruction`` to compare to.
+        :param other: Another ``AbstractInstruction`` to compare to.
 
         :returns: A ``True`` value if the ``other`` instruction is
                   equivalent to this one, ``False`` otherwise.
@@ -232,22 +363,37 @@ class Ident(Instruction):
                 self.ident == other.ident)
 
 
-class Operator(Instruction):
+class Operator(AbstractInstruction):
     """
     An instruction that performs an operation on some elements of the
     evaluation context stack, replacing those elements with the return
     value of the operation.
     """
 
-    def __init__(self, count):
+    def __init__(self, count, opstr):
         """
-        Initialize an ``Operator``.
+        Initialize an ``Operator`` object.
 
         :param count: The number of stack elements that will be
                       consumed by the operator.
+        :param opstr: A string representing the operation that will be
+                      performed.  This is used when a representation
+                      of this operator is requested.
         """
 
         self.count = count
+        self.opstr = opstr
+
+    def __repr__(self):
+        """
+        Return a representation of this instruction.  Should provide
+        enough information for a user to understand what operation
+        will be performed.
+
+        :returns: A string representation of this instruction.
+        """
+
+        return '%s(%d, %r)' % (self.__class__.__name__, self.count, self.opstr)
 
     def __call__(self, ctxt):
         """
@@ -275,7 +421,7 @@ class Operator(Instruction):
         """
         Compare two instructions for equivalence.
 
-        :param other: Another ``Instruction`` to compare to.
+        :param other: Another ``AbstractInstruction`` to compare to.
 
         :returns: A ``True`` value if the ``other`` instruction is
                   equivalent to this one, ``False`` otherwise.
@@ -301,9 +447,9 @@ class Operator(Instruction):
 
         # Are the elements constants?
         if all(isinstance(e, Constant) for e in elems):
-            return [self.op(*elems)]
+            return [Constant(self.op(*[e.value for e in elems]))]
 
-        return elems[:] + [self]
+        return [Instructions(elems[:] + [self])]
 
     @abc.abstractmethod
     def op(self, *args):
@@ -322,16 +468,19 @@ class GenericOperator(Operator):
     constructor.
     """
 
-    def __init__(self, count, op):
+    def __init__(self, count, op, opstr):
         """
-        Initialize a ``GenericOperator``.
+        Initialize a ``GenericOperator`` object.
 
         :param count: The number of stack elements that will be
                       consumed by the operator.
         :param op: The callable implementing the operation.
+        :param opstr: A string representing the operation that will be
+                      performed.  This is used when a representation
+                      of this operator is requested.
         """
 
-        super(GenericOperator, self).__init__(count)
+        super(GenericOperator, self).__init__(count, opstr)
         self._op = op
 
     def __hash__(self):
@@ -347,7 +496,7 @@ class GenericOperator(Operator):
         """
         Compare two instructions for equivalence.
 
-        :param other: Another ``Instruction`` to compare to.
+        :param other: Another ``AbstractInstruction`` to compare to.
 
         :returns: A ``True`` value if the ``other`` instruction is
                   equivalent to this one, ``False`` otherwise.
@@ -376,13 +525,13 @@ class SetOperator(GenericOperator):
 
     def __init__(self, count):
         """
-        Initialize a ``SetOperator``.
+        Initialize a ``SetOperator`` object.
 
         :param count: The number of elements to construct the set
                       from.
         """
 
-        super(SetOperator, self).__init__(count, frozenset)
+        super(SetOperator, self).__init__(count, frozenset, 'set')
 
 
 class CallOperator(Operator):
@@ -393,6 +542,18 @@ class CallOperator(Operator):
     arguments will be replaced by the return value of calling the
     function or method.
     """
+
+    def __init__(self, count):
+        """
+        Initialize a ``CallOperator`` object.
+
+        :param count: The number of elements to construct the call
+                      from.  The first element is the callable, and
+                      the remaining elements will be positional
+                      arguments to the callable.
+        """
+
+        super(CallOperator, self).__init__(count, 'call')
 
     def op(self, func, *args):
         """
@@ -418,41 +579,41 @@ class CallOperator(Operator):
                   this operator.
         """
 
-        return elems[:] + [self]
+        return [Instructions(elems[:] + [self])]
 
 
 # Unary operators
-inv_op = GenericOperator(1, operator.inv)
-pos_op = GenericOperator(1, operator.pos)
-neg_op = GenericOperator(1, operator.neg)
-not_op = GenericOperator(1, operator.not_)
+inv_op = GenericOperator(1, operator.inv, '~')
+pos_op = GenericOperator(1, operator.pos, '+')
+neg_op = GenericOperator(1, operator.neg, '-')
+not_op = GenericOperator(1, operator.not_, 'not')
 
 # Binary operators
-pow_op = GenericOperator(2, operator.pow)
-mul_op = GenericOperator(2, operator.mul)
-true_div_op = GenericOperator(2, operator.truediv)
-floor_div_op = GenericOperator(2, operator.floordiv)
-mod_op = GenericOperator(2, operator.mod)
-add_op = GenericOperator(2, operator.add)
-sub_op = GenericOperator(2, operator.sub)
-left_shift_op = GenericOperator(2, operator.lshift)
-right_shift_op = GenericOperator(2, operator.rshift)
-bit_and_op = GenericOperator(2, operator.and_)
-bit_xor_op = GenericOperator(2, operator.xor)
-bit_or_op = GenericOperator(2, operator.or_)
-in_op = GenericOperator(2, lambda x, y: x in y)
-not_in_op = GenericOperator(2, lambda x, y: x not in y)
-is_op = GenericOperator(2, operator.is_)
-is_not_op = GenericOperator(2, operator.is_not)
-lt_op = GenericOperator(2, operator.lt)
-gt_op = GenericOperator(2, operator.gt)
-le_op = GenericOperator(2, operator.le)
-ge_op = GenericOperator(2, operator.ge)
-ne_op = GenericOperator(2, operator.ne)
-eq_op = GenericOperator(2, operator.eq)
-and_op = GenericOperator(2, lambda x, y: x and y)
-or_op = GenericOperator(2, lambda x, y: x or y)
-item_op = GenericOperator(2, lambda x, y: x[y])
+pow_op = GenericOperator(2, operator.pow, '**')
+mul_op = GenericOperator(2, operator.mul, '*')
+true_div_op = GenericOperator(2, operator.truediv, '/')
+floor_div_op = GenericOperator(2, operator.floordiv, '//')
+mod_op = GenericOperator(2, operator.mod, '%')
+add_op = GenericOperator(2, operator.add, '+')
+sub_op = GenericOperator(2, operator.sub, '-')
+left_shift_op = GenericOperator(2, operator.lshift, '<<')
+right_shift_op = GenericOperator(2, operator.rshift, '>>')
+bit_and_op = GenericOperator(2, operator.and_, '&')
+bit_xor_op = GenericOperator(2, operator.xor, '^')
+bit_or_op = GenericOperator(2, operator.or_, '|')
+in_op = GenericOperator(2, lambda x, y: x in y, 'in')
+not_in_op = GenericOperator(2, lambda x, y: x not in y, 'not in')
+is_op = GenericOperator(2, operator.is_, 'is')
+is_not_op = GenericOperator(2, operator.is_not, 'is not')
+lt_op = GenericOperator(2, operator.lt, '<')
+gt_op = GenericOperator(2, operator.gt, '>')
+le_op = GenericOperator(2, operator.le, '<=')
+ge_op = GenericOperator(2, operator.ge, '>=')
+ne_op = GenericOperator(2, operator.ne, '!=')
+eq_op = GenericOperator(2, operator.eq, '==')
+and_op = GenericOperator(2, lambda x, y: x and y, 'and')
+or_op = GenericOperator(2, lambda x, y: x or y, 'or')
+item_op = GenericOperator(2, lambda x, y: x[y], '[]')
 
 # The trinary operator
-trinary_op = GenericOperator(3, lambda x, y, z: y if x else z)
+trinary_op = GenericOperator(3, lambda x, y, z: y if x else z, 'if/else')
