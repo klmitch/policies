@@ -181,6 +181,10 @@ class TestParseRule(tests.TestCase):
             Constant(2), AuthorizationAttr('b'),
             Constant(3), AuthorizationAttr('c'),
         ])),
+        ('level > 400 {{ level=level }}', Instructions([
+            Ident('level'), Constant(400), gt_op, set_authz,
+            Ident('level'), AuthorizationAttr('level'),
+        ])),
     ]
 
     def test_parse(self):
