@@ -17,15 +17,21 @@
 import abc
 import operator
 
+from policies import authorization
+
 
 __all__ = ['Instructions',
            'Constant', 'Attribute', 'Ident', 'SetOperator', 'CallOperator',
+           'AuthorizationAttr',
            'inv_op', 'pos_op', 'neg_op', 'not_op',
            'pow_op', 'mul_op', 'true_div_op', 'floor_div_op', 'mod_op',
            'add_op', 'sub_op', 'left_shift_op', 'right_shift_op',
            'bit_and_op', 'bit_xor_op', 'bit_or_op', 'in_op', 'not_in_op',
            'is_op', 'is_not_op', 'lt_op', 'gt_op', 'le_op', 'ge_op', 'ne_op',
-           'eq_op', 'and_op', 'or_op', 'item_op', 'trinary_op']
+           'eq_op', 'and_op', 'or_op',
+           'item_op',
+           'trinary_op',
+           'set_authz']
 
 
 class AbstractInstruction(object):
@@ -591,6 +597,123 @@ class CallOperator(Operator):
         return [Instructions(elems[:] + [self])]
 
 
+class SetAuthorization(AbstractInstruction):
+    """
+    An instruction that sets the result of the authorization check.
+    This initializes the ``authz`` attribute of the evaluation context
+    based on the boolean value of the top of the stack.
+    """
+
+    def __repr__(self):
+        """
+        Return a representation of this instruction.  Should provide
+        enough information for a user to understand what operation
+        will be performed.
+
+        :returns: A string representation of this instruction.
+        """
+
+        return 'SetAuthorization()'
+
+    def __call__(self, ctxt):
+        """
+        Evaluate this instruction.  Creates the ``authz`` attribute of
+        the evaluation context, with the boolean value of the top of
+        the stack.  The attribute defaults are drawn from the
+        ``rule_defaults`` attribute of the evaluation context, which
+        is expected to be a dictionary.
+
+        :param ctxt: The evaluation context.
+        """
+
+        ctxt.authz = authorization.Authorization(ctxt.stack.pop(),
+                                                 ctxt.rule_defaults)
+
+    def __hash__(self):
+        """
+        Return a hash value for this instruction.
+
+        :returns: The hash value.
+        """
+
+        return super(SetAuthorization, self).__hash__()
+
+    def __eq__(self, other):
+        """
+        Compare two instructions for equivalence.
+
+        :param other: Another ``AbstractInstruction`` to compare to.
+
+        :returns: A ``True`` value if the ``other`` instruction is
+                  equivalent to this one, ``False`` otherwise.
+        """
+
+        return super(SetAuthorization, self).__eq__(other)
+
+
+class AuthorizationAttr(AbstractInstruction):
+    """
+    An instruction that sets attributes on the authorization result.
+    The ``SetAuthorization`` instruction MUST be executed before this
+    instruction can be called.  A value will be popped off the stack
+    and its value set on a named attribute of the authorization
+    result.
+    """
+
+    def __init__(self, attribute):
+        """
+        Initialize an ``AuthorizationAttr`` object.
+
+        :param attribute: The name of the attribute to set.
+        """
+
+        self.attribute = attribute
+
+    def __repr__(self):
+        """
+        Return a representation of this instruction.  Should provide
+        enough information for a user to understand what operation
+        will be performed.
+
+        :returns: A string representation of this instruction.
+        """
+
+        return 'AuthorizationAttr(%r)' % self.attribute
+
+    def __call__(self, ctxt):
+        """
+        Evaluate this instruction.  Pops a value off the top of the
+        evaluation context stack and sets the corresponding attribute
+        of the authorization result to that value.
+
+        :param ctxt: The evaluation context.
+        """
+
+        ctxt.authz._attrs[self.attribute] = ctxt.stack.pop()
+
+    def __hash__(self):
+        """
+        Return a hash value for this instruction.
+
+        :returns: The hash value.
+        """
+
+        return super(AuthorizationAttr, self).__hash__(self.attribute)
+
+    def __eq__(self, other):
+        """
+        Compare two instructions for equivalence.
+
+        :param other: Another ``AbstractInstruction`` to compare to.
+
+        :returns: A ``True`` value if the ``other`` instruction is
+                  equivalent to this one, ``False`` otherwise.
+        """
+
+        return (super(AuthorizationAttr, self).__eq__(other) and
+                self.attribute == other.attribute)
+
+
 # Unary operators
 inv_op = GenericOperator(1, operator.inv, '~')
 pos_op = GenericOperator(1, operator.pos, '+')
@@ -626,3 +749,6 @@ item_op = GenericOperator(2, lambda x, y: x[y], '[]')
 
 # The trinary operator
 trinary_op = GenericOperator(3, lambda x, y, z: y if x else z, 'if/else')
+
+# The set authorization instruction
+set_authz = SetAuthorization()

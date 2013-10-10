@@ -407,6 +407,81 @@ class TestCallOperator(tests.TestCase):
         self.assertEqual(result[0].instructions, tuple(elems + [call_op]))
 
 
+class TestSetAuthorization(tests.TestCase):
+    def test_repr(self):
+        authz = instructions.SetAuthorization()
+
+        self.assertEqual(repr(authz), "SetAuthorization()")
+
+    @mock.patch('policies.authorization.Authorization', return_value='authz')
+    def test_call(self, mock_Authorization):
+        ctxt = mock.Mock(stack=['zhtua'], rule_defaults='defaults')
+        authz = instructions.SetAuthorization()
+
+        authz(ctxt)
+
+        self.assertEqual(ctxt.stack, [])
+        self.assertEqual(ctxt.authz, 'authz')
+        mock_Authorization.assert_called_once_with('zhtua', 'defaults')
+
+    def test_hash(self):
+        authz = instructions.SetAuthorization()
+
+        self.assertEqual(hash(authz),
+                         hash((instructions.SetAuthorization,)))
+
+    def test_eq(self):
+        class SetAuthorization2(instructions.SetAuthorization):
+            pass
+
+        authz1 = instructions.SetAuthorization()
+        authz2 = instructions.SetAuthorization()
+        authz3 = SetAuthorization2()
+
+        self.assertTrue(authz1.__eq__(authz2))
+        self.assertFalse(authz1.__eq__(authz3))
+
+
+class TestAuthorizationAttr(tests.TestCase):
+    def test_init(self):
+        attr = instructions.AuthorizationAttr('attr')
+
+        self.assertEqual(attr.attribute, 'attr')
+
+    def test_repr(self):
+        attr = instructions.AuthorizationAttr('attr')
+
+        self.assertEqual(repr(attr), "AuthorizationAttr('attr')")
+
+    def test_call(self):
+        ctxt = mock.Mock(stack=['value'], authz=mock.Mock(_attrs={}))
+        attr = instructions.AuthorizationAttr('attr')
+
+        attr(ctxt)
+
+        self.assertEqual(ctxt.stack, [])
+        self.assertEqual(ctxt.authz._attrs, {'attr': 'value'})
+
+    def test_hash(self):
+        attr = instructions.AuthorizationAttr('attr')
+
+        self.assertEqual(hash(attr),
+                         hash((instructions.AuthorizationAttr, 'attr')))
+
+    def test_eq(self):
+        class AuthorizationAttr2(instructions.AuthorizationAttr):
+            pass
+
+        attr1 = instructions.AuthorizationAttr('attr')
+        attr2 = instructions.AuthorizationAttr('attr')
+        attr3 = instructions.AuthorizationAttr('other')
+        attr4 = AuthorizationAttr2('attr')
+
+        self.assertTrue(attr1.__eq__(attr2))
+        self.assertFalse(attr1.__eq__(attr3))
+        self.assertFalse(attr1.__eq__(attr4))
+
+
 class TestInOperator(tests.TestCase):
     def test_op(self):
         exemplar = frozenset([1, 3, 5])
