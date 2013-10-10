@@ -335,7 +335,7 @@ rule = (
         LLBRACE +
         pyparsing.Optional(
             assignment +
-            pyparsing.ZeroOrMore(COMMA + assignment) +
+            pyparsing.ZeroOrMore(COMMA + assignment)
         ) +
         pyparsing.Optional(COMMA) +
         RRBRACE
