@@ -39,7 +39,9 @@ def unary_construct(tokens):
               instructions.
     """
 
-    return [Instructions([tokens[1], tokens[0]])]
+    op, operand = tokens
+
+    return op.fold([operand])
 
 
 def binary_construct(tokens):
@@ -77,19 +79,26 @@ def binary_construct(tokens):
 TRUE = pyparsing.Keyword('True').setParseAction(lambda: [Constant(True)])
 FALSE = pyparsing.Keyword('False').setParseAction(lambda: [Constant(False)])
 NONE = pyparsing.Keyword('None').setParseAction(lambda: [Constant(None)])
-INT = pyparsing.Regex(r'[+-]?\d+(?![.eE])').\
-    setParseAction(lambda t: [Constant(int(t[0]))])
-FLOAT = pyparsing.Regex(r'[+-]?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?').\
-    setParseAction(lambda t: [Constant(float(t[0]))])
-STR = pyparsing.OneOrMore(pyparsing.quotedString).\
-    setParseAction(lambda t: [Constant(''.join(
-        v[1:-1].decode('unicode-escape') for v in t))])
-IDENT = pyparsing.Regex(r'[a-zA-Z_][a-zA-Z0-9_]*').\
-    setParseAction(lambda t: [Ident(t[0])])
-ATTR = pyparsing.Regex(r'[a-zA-Z_][a-zA-Z0-9_]*').\
-    setParseAction(lambda t: [Attribute(t[0])])
-AUTHATTR = pyparsing.Regex(r'[a-zA-Z][a-zA-Z0-9_]*').\
-    setParseAction(lambda t: [AuthorizationAttr(t[0])])
+INT = (
+    pyparsing.Regex(r'[+-]?\d+') +
+    ~pyparsing.FollowedBy(pyparsing.Regex(r'[.eE]'))
+).setParseAction(lambda t: [Constant(int(t[0]))])
+FLOAT = (
+    pyparsing.Regex(r'[+-]?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?')
+).setParseAction(lambda t: [Constant(float(t[0]))])
+STR = (
+    pyparsing.OneOrMore(pyparsing.quotedString)
+).setParseAction(lambda t: [Constant(''.join(
+    v[1:-1].decode('unicode-escape') for v in t))])
+IDENT = (
+    pyparsing.Regex(r'[a-zA-Z_][a-zA-Z0-9_]*')
+).setParseAction(lambda t: [Ident(t[0])])
+ATTR = (
+    pyparsing.Regex(r'[a-zA-Z_][a-zA-Z0-9_]*')
+).setParseAction(lambda t: [Attribute(t[0])])
+AUTHATTR = (
+    pyparsing.Regex(r'[a-zA-Z][a-zA-Z0-9_]*')
+).setParseAction(lambda t: [AuthorizationAttr(t[0])])
 
 # Unary operators
 INV_OP = pyparsing.Literal('~').setParseAction(lambda: [inv_op])
@@ -106,17 +115,20 @@ MOD_OP = pyparsing.Literal('%').setParseAction(lambda: [mod_op])
 ADD_OP = pyparsing.Literal('+').setParseAction(lambda: [add_op])
 SUB_OP = pyparsing.Literal('-').setParseAction(lambda: [sub_op])
 LEFT_SHIFT_OP = pyparsing.Literal('<<').setParseAction(lambda: [left_shift_op])
-RIGHT_SHIFT_OP = pyparsing.Literal('>>').\
-    setParseAction(lambda: [right_shift_op])
+RIGHT_SHIFT_OP = (
+    pyparsing.Literal('>>')
+).setParseAction(lambda: [right_shift_op])
 BIT_AND_OP = pyparsing.Literal('&').setParseAction(lambda: [bit_and_op])
 BIT_XOR_OP = pyparsing.Literal('^').setParseAction(lambda: [bit_xor_op])
 BIT_OR_OP = pyparsing.Literal('|').setParseAction(lambda: [bit_or_op])
 IN_OP = pyparsing.Keyword('in').setParseAction(lambda: [in_op])
-NOT_IN_OP = (pyparsing.Keyword('not') + pyparsing.Keyword('in')).\
-    setParseAction(lambda: [not_in_op])
+NOT_IN_OP = (
+    pyparsing.Keyword('not') + pyparsing.Keyword('in')
+).setParseAction(lambda: [not_in_op])
 IS_OP = pyparsing.Keyword('is').setParseAction(lambda: [is_op])
-IS_NOT_OP = (pyparsing.Keyword('is') + pyparsing.Keyword('not')).\
-    setParseAction(lambda: [is_not_op])
+IS_NOT_OP = (
+    pyparsing.Keyword('is') + pyparsing.Keyword('not')
+).setParseAction(lambda: [is_not_op])
 LT_OP = pyparsing.Literal('<').setParseAction(lambda: [lt_op])
 GT_OP = pyparsing.Literal('>').setParseAction(lambda: [gt_op])
 LE_OP = pyparsing.Literal('<=').setParseAction(lambda: [le_op])
@@ -162,8 +174,7 @@ set_literal = (
 ).setParseAction(lambda t: SetOperator(len(t)).fold(t))
 
 # Build the value non-terminal
-value = (TRUE | FALSE | NONE | INT | FLOAT | STR | IDENT |
-         set_literal)
+value = (TRUE | FALSE | NONE | INT | FLOAT | STR | IDENT | set_literal)
 
 # Build the primary non-terminal
 primary = value | (LPAREN + int_expr + RPAREN)
@@ -265,7 +276,7 @@ expr8 <<= (expr8_match | expr7)
 # >=, !=, and ==
 expr9 = pyparsing.Forward()
 # Note: Order here is important; e.g., <= tried first, then <
-expr9_ops = (IN_OP | NOT_IN_OP | IS_OP | IS_NOT_OP |
+expr9_ops = (IN_OP | NOT_IN_OP | IS_NOT_OP | IS_OP |
              LE_OP | GE_OP | LT_OP | GT_OP | NE_OP | EQ_OP)
 expr9_match = (
     pyparsing.FollowedBy(expr8 + expr9_ops + expr8) +
