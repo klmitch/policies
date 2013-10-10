@@ -371,7 +371,13 @@ class TestSetOperator(tests.TestCase):
 
         self.assertEqual(set_op.count, 5)
         self.assertEqual(set_op.opstr, 'set')
-        self.assertEqual(set_op._op, frozenset)
+
+    def test_op(self):
+        set_op = instructions.SetOperator(5)
+
+        result = set_op.op(3, 5, 7)
+
+        self.assertEqual(result, frozenset([3, 5, 7]))
 
 
 class TestCallOperator(tests.TestCase):

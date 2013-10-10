@@ -516,7 +516,7 @@ class GenericOperator(Operator):
         return self._op(*args)
 
 
-class SetOperator(GenericOperator):
+class SetOperator(Operator):
     """
     An instruction that constructs a frozen set from a given number of
     elements on the evaluation context stack, replacing those elements
@@ -531,7 +531,16 @@ class SetOperator(GenericOperator):
                       from.
         """
 
-        super(SetOperator, self).__init__(count, frozenset, 'set')
+        super(SetOperator, self).__init__(count, 'set')
+
+    def op(self, *args):
+        """
+        Construct a set with the given arguments.
+
+        :returns: The constructed set.
+        """
+
+        return frozenset(args)
 
 
 class CallOperator(Operator):
