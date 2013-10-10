@@ -522,6 +522,61 @@ class GenericOperator(Operator):
         return self._op(*args)
 
 
+class TrinaryOperator(Operator):
+    """
+    An instruction that implements the trinary operation.  If the
+    conditional evaluates to ``True``, the ``if_true`` element is
+    returned, otherwise the ``if_false`` element is returned.  The
+    three elements are drawn from the stack in the indicated order.
+    """
+
+    def __init__(self):
+        """
+        Initialize a ``TrinaryOperator`` object.
+        """
+
+        super(TrinaryOperator, self).__init__(3, 'if/else')
+
+    def op(self, cond, if_true, if_false):
+        """
+        Implement the trinary operation.
+
+        :param cond: The conditional.
+        :param if_true: The value to return if the conditional
+                        evaluates to ``True``.
+        :param if_false: The value to return if the conditional
+                         evaluates to ``False``.
+
+        :returns: One of ``if_true`` or ``if_false``, depending on the
+                  boolean value of ``cond``.
+        """
+
+        return if_true if cond else if_false
+
+    def fold(self, elems):
+        """
+        Perform constant folding.  Unlike ``Operator.fold()``, the
+        only important operand for determining whether the expression
+        can be folded is the value of the conditional.  If it is a
+        constant value, then the trinary expression can be evaluated
+        immediately.
+
+        :param elems: A list (or list-like object) containing the
+                      elements.
+
+        :returns: If the first element is an instance of ``Constant``,
+                  returns either the second or third element,
+                  depending on the boolean value of the first element.
+                  Otherwise, returns a list composed of the elements
+                  of ``elems`` plus this operator.
+        """
+
+        if isinstance(elems[0], Constant):
+            return [elems[1] if elems[0].value else elems[2]]
+
+        return [Instructions(elems[:] + [self])]
+
+
 class SetOperator(Operator):
     """
     An instruction that constructs a frozen set from a given number of
@@ -748,7 +803,7 @@ or_op = GenericOperator(2, lambda x, y: x or y, 'or')
 item_op = GenericOperator(2, lambda x, y: x[y], '[]')
 
 # The trinary operator
-trinary_op = GenericOperator(3, lambda x, y, z: y if x else z, 'if/else')
+trinary_op = TrinaryOperator()
 
 # The set authorization instruction
 set_authz = SetAuthorization()

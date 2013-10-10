@@ -365,6 +365,51 @@ class TestGenericOperator(tests.TestCase):
         op.assert_called_once_with(1, 2, 3)
 
 
+class TestTrinaryOperator(tests.TestCase):
+    def test_init(self):
+        trinary = instructions.TrinaryOperator()
+
+        self.assertEqual(trinary.count, 3)
+        self.assertEqual(trinary.opstr, 'if/else')
+
+    def test_op(self):
+        trinary = instructions.TrinaryOperator()
+
+        self.assertEqual(trinary.op(1, 'true', 'false'), 'true')
+        self.assertEqual(trinary.op(0, 'true', 'false'), 'false')
+
+    def test_fold_constant_true(self):
+        elems = [instructions.Constant(True), instructions.Ident('a'),
+                 instructions.Ident('b')]
+        trinary = instructions.TrinaryOperator()
+
+        result = trinary.fold(elems)
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result, [elems[1]])
+
+    def test_fold_constant_false(self):
+        elems = [instructions.Constant(False), instructions.Ident('a'),
+                 instructions.Ident('b')]
+        trinary = instructions.TrinaryOperator()
+
+        result = trinary.fold(elems)
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result, [elems[2]])
+
+    def test_fold_nonconstant(self):
+        elems = [instructions.Ident('a'), instructions.Constant('true'),
+                 instructions.Constant('false')]
+        trinary = instructions.TrinaryOperator()
+
+        result = trinary.fold(elems)
+
+        self.assertEqual(len(result), 1)
+        self.assertTrue(isinstance(result[0], instructions.Instructions))
+        self.assertEqual(result[0].instructions, tuple(elems + [trinary]))
+
+
 class TestSetOperator(tests.TestCase):
     def test_init(self):
         set_op = instructions.SetOperator(5)
@@ -528,9 +573,3 @@ class TestItemOperator(tests.TestCase):
         self.assertEqual(instructions.item_op.op(exemplar, 'b'), 2)
         self.assertRaises(KeyError, instructions.item_op.op,
                           exemplar, 'c')
-
-
-class TestTrinaryOperator(tests.TestCase):
-    def test_op(self):
-        self.assertEqual(instructions.trinary_op.op(True, 1, 2), 1)
-        self.assertEqual(instructions.trinary_op.op(False, 1, 2), 2)
