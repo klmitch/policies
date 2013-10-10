@@ -102,6 +102,8 @@ class TestParseRule(tests.TestCase):
         ('23e-1', Instructions([Constant(2.3), set_authz])),
         ('"this is \\" a test"',
          Instructions([Constant('this is " a test'), set_authz])),
+        ('"string " "concatenation"',
+         Instructions([Constant('string concatenation'), set_authz])),
         ('foobar', Instructions([Ident('foobar'), set_authz])),
         ('~a', Instructions([Ident('a'), inv_op, set_authz])),
         ('+a', Instructions([Ident('a'), pos_op, set_authz])),
