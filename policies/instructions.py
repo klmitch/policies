@@ -135,15 +135,22 @@ class Instructions(AbstractInstruction):
 
         return "Instructions(%r)" % (self.instructions,)
 
-    def __call__(self, ctxt):
+    def __call__(self, ctxt, no_authz=False):
         """
         Evaluate this instruction.  Executes the contained
         instructions in sequence.
 
         :param ctxt: The evaluation context.
+        :param no_authz: If ``True``, evaluation will stop at the
+                         set_authz instruction.  This can be used to
+                         only evaluate the expression in a rule.
         """
 
         for inst in self.instructions:
+            # Allows for evaluating only the expression of a rule
+            if no_authz and inst == set_authz:
+                break
+
             inst(ctxt)
 
     def __hash__(self):

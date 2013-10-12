@@ -100,6 +100,22 @@ class TestInstructions(tests.TestCase):
 
     @mock.patch.object(instructions.Instructions, '_linearize',
                        side_effect=lambda x: x)
+    def test_call_no_authz(self, mock_linearize):
+        calls_obj = mock.Mock()
+        insts = instructions.Instructions([calls_obj.one, calls_obj.two,
+                                           instructions.set_authz,
+                                           calls_obj.three, calls_obj.four])
+
+        insts('ctxt', True)
+
+        calls_obj.assert_has_calls([
+            mock.call.one('ctxt'),
+            mock.call.two('ctxt'),
+        ])
+        self.assertEqual(len(calls_obj.method_calls), 2)
+
+    @mock.patch.object(instructions.Instructions, '_linearize',
+                       side_effect=lambda x: x)
     def test_hash(self, mock_linearize):
         insts = instructions.Instructions([1, 2, 3])
 
