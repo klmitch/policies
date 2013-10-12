@@ -22,9 +22,6 @@ import tests
 
 
 class TestRule(tests.TestCase):
-    def test_init_noargs(self):
-        self.assertRaises(TypeError, rules.Rule)
-
     def test_init_name(self):
         rule = rules.Rule('name')
 
@@ -42,8 +39,12 @@ class TestRule(tests.TestCase):
         self.assertEqual(rule._instructions, None)
 
     def test_init_attrs(self):
-        rule = rules.Rule('name', 'text', name='eman', text='txet',
-                          other=1, _ignored='ignored')
+        rule = rules.Rule('name', 'text', {
+            'name': 'eman',
+            'text': 'txet',
+            'other': 1,
+            '_ignored': 'ignored',
+        })
 
         self.assertEqual(rule.name, 'name')
         self.assertEqual(rule.text, 'text')

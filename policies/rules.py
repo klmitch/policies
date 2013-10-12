@@ -26,33 +26,25 @@ class Rule(object):
     is parsed on demand.
     """
 
-    def __init__(*args, **attrs):
+    def __init__(self, name, text='', attrs=None):
         """
-        Initializes a ``Rule`` object.  Keyword arguments designate
-        default values for authorization attributes, and overrides the
-        default of ``None``.
+        Initializes a ``Rule`` object.
 
         :param name: The rule name.
         :param text: Optional; the text for the rule.  If not given,
                      will be the empty string, which evaluates to a
                      rule which always denies authorization.
+        :param attrs: A dictionary of authorization attribute
+                      defaults.  Overrides the default of ``None``.
+                      Note that authorization attributes may not have
+                      a leading underscore ("_").
         """
 
-        # Because we're handling the positional arguments ourselves
-        # (to prevent clashes with the keyword arguments), make sure
-        # to raise the correct exception if there aren't enough
-        try:
-            (self, name) = args[:2]
-        except ValueError:
-            raise TypeError(
-                '__init__() takes at least 2 arguments (%d given)' % len(args))
-
-        # Store the name and pick up the rule text
+        # Store the essential data
         self.name = name
-        self.text = args[2] if len(args) > 2 else ''
-
-        # Store the attribute defaults
-        self.attrs = dict((k, v) for k, v in attrs.items() if k[0] != '_')
+        self.text = text
+        self.attrs = dict((k, v) for k, v in (attrs or {}).items()
+                          if k[0] != '_' and v is not None)
 
         # The instructions will be parsed on demand
         self._instructions = None
