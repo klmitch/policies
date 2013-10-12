@@ -675,14 +675,13 @@ class SetAuthorization(AbstractInstruction):
         Evaluate this instruction.  Creates the ``authz`` attribute of
         the evaluation context, with the boolean value of the top of
         the stack.  The attribute defaults are drawn from the
-        ``rule_defaults`` attribute of the evaluation context, which
-        is expected to be a dictionary.
+        ``attrs`` attribute of the evaluation context, which is
+        expected to be a dictionary.
 
         :param ctxt: The evaluation context.
         """
 
-        ctxt.authz = authorization.Authorization(ctxt.stack.pop(),
-                                                 ctxt.rule_defaults)
+        ctxt.authz = authorization.Authorization(ctxt.stack.pop(), ctxt.attrs)
 
     def __hash__(self):
         """

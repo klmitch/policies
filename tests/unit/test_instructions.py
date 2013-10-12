@@ -460,7 +460,7 @@ class TestSetAuthorization(tests.TestCase):
 
     @mock.patch('policies.authorization.Authorization', return_value='authz')
     def test_call(self, mock_Authorization):
-        ctxt = mock.Mock(stack=['zhtua'], rule_defaults='defaults')
+        ctxt = mock.Mock(stack=['zhtua'], attrs='defaults')
         authz = instructions.SetAuthorization()
 
         authz(ctxt)
