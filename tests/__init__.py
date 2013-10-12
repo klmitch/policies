@@ -17,5 +17,9 @@
 import unittest2
 
 
+class TestException(Exception):
+    pass
+
+
 class TestCase(unittest2.TestCase):
     pass
