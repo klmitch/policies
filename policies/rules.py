@@ -62,3 +62,35 @@ class Rule(object):
             self._instructions = parser.parse_rule(self.name, self.text)
 
         return self._instructions
+
+
+class RuleDoc(object):
+    """
+    A simple class to store documentation for a rule.  Instances of
+    this class are constructed when pre-declaring rules on a given
+    ``RuleSet``.
+    """
+
+    def __init__(self, name, doc=None, attr_docs=None):
+        """
+        Initialize a ``RuleDoc`` object.
+
+        :param name: The name of the rule.
+        :param doc: A documentation string for the rule.  If given,
+                    should describe the purpose of the rule--that is,
+                    what operation is protected by the rule.
+        :param attr_docs: A dictionary of documentation strings for
+                          the authorization attributes.  If provided,
+                          each entry should explain the purpose of
+                          each authorization attribute--that is, what
+                          operation is protected or goverened by the
+                          attribute.
+        """
+
+        self.name = name
+        self.doc = doc
+
+        # Filter out invalid authorization attributes (those beginning
+        # with an '_') and those that have no documentation
+        self.attr_docs = dict((k, v) for k, v in (attr_docs or {}).items()
+                              if k[0] != '_' and v)

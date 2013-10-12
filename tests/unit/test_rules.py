@@ -22,7 +22,7 @@ import tests
 
 
 class TestRule(tests.TestCase):
-    def test_init_name(self):
+    def test_init_basic(self):
         rule = rules.Rule('name')
 
         self.assertEqual(rule.name, 'name')
@@ -30,20 +30,13 @@ class TestRule(tests.TestCase):
         self.assertEqual(rule.attrs, {})
         self.assertEqual(rule._instructions, None)
 
-    def test_init_text(self):
-        rule = rules.Rule('name', 'text')
-
-        self.assertEqual(rule.name, 'name')
-        self.assertEqual(rule.text, 'text')
-        self.assertEqual(rule.attrs, {})
-        self.assertEqual(rule._instructions, None)
-
-    def test_init_attrs(self):
+    def test_init_full(self):
         rule = rules.Rule('name', 'text', {
             'name': 'eman',
             'text': 'txet',
             'other': 1,
             '_ignored': 'ignored',
+            'none': None,
         })
 
         self.assertEqual(rule.name, 'name')
@@ -71,3 +64,27 @@ class TestRule(tests.TestCase):
         self.assertEqual(rule.instructions, 'instructions')
         self.assertEqual(rule._instructions, 'instructions')
         mock_parse_rule.assert_called_once_with('name', 'text')
+
+
+class TestRuleDoc(tests.TestCase):
+    def test_init_basic(self):
+        rdoc = rules.RuleDoc('name')
+
+        self.assertEqual(rdoc.name, 'name')
+        self.assertEqual(rdoc.doc, None)
+        self.assertEqual(rdoc.attr_docs, {})
+
+    def test_init_full(self):
+        rdoc = rules.RuleDoc('name', 'doc', {
+            'name': 'eman',
+            'text': 'txet',
+            '_ignored': 'ignored',
+            'none': '',
+        })
+
+        self.assertEqual(rdoc.name, 'name')
+        self.assertEqual(rdoc.doc, 'doc')
+        self.assertEqual(rdoc.attr_docs, {
+            'name': 'eman',
+            'text': 'txet',
+        })
