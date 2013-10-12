@@ -21,9 +21,6 @@ import pyparsing
 from policies.instructions import *
 
 
-__all__ = ['parse_rule']
-
-
 pyparsing.ParserElement.enablePackrat()
 
 
