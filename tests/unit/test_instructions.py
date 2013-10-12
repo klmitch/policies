@@ -446,26 +446,69 @@ class TestCallOperator(tests.TestCase):
         call_op = instructions.CallOperator(5)
 
         self.assertEqual(call_op.count, 5)
-        self.assertEqual(call_op.opstr, 'call')
 
-    def test_op(self):
-        func = mock.Mock(return_value='value')
+    def test_repr(self):
         call_op = instructions.CallOperator(5)
 
-        result = call_op.op(func, 1, 2, 3, 4)
+        self.assertEqual(repr(call_op), "CallOperator(5)")
 
-        self.assertEqual(result, 'value')
+    def test_call_basic(self):
+        func = mock.Mock(return_value='value', spec=[])
+        ctxt = mock.Mock(stack=[func, 1, 2, 3, 4])
+        call_op = instructions.CallOperator(5)
+
+        call_op(ctxt)
+
+        self.assertEqual(ctxt.stack, ['value'])
         func.assert_called_once_with(1, 2, 3, 4)
 
-    def test_fold(self):
-        elems = [instructions.Constant(i) for i in range(3)]
-        call_op = instructions.CallOperator(3)
+    def test_call_want_context_false(self):
+        func = mock.Mock(return_value='value', _policies_want_context=False)
+        ctxt = mock.Mock(stack=[func, 1, 2, 3, 4])
+        call_op = instructions.CallOperator(5)
 
-        result = call_op.fold(elems)
+        call_op(ctxt)
 
-        self.assertEqual(len(result), 1)
-        self.assertTrue(isinstance(result[0], instructions.Instructions))
-        self.assertEqual(result[0].instructions, tuple(elems + [call_op]))
+        self.assertEqual(ctxt.stack, ['value'])
+        func.assert_called_once_with(1, 2, 3, 4)
+
+    def test_call_want_context_true(self):
+        func = mock.Mock(return_value='value', _policies_want_context=True)
+        ctxt = mock.Mock(stack=[func, 1, 2, 3, 4])
+        call_op = instructions.CallOperator(5)
+
+        call_op(ctxt)
+
+        self.assertEqual(ctxt.stack, [])
+        func.assert_called_once_with(ctxt, 1, 2, 3, 4)
+
+    def test_hash(self):
+        call_op = instructions.CallOperator(5)
+
+        self.assertEqual(hash(call_op),
+                         hash((instructions.CallOperator, 5)))
+
+    def test_eq(self):
+        class CallOperator2(instructions.CallOperator):
+            pass
+
+        call_op1 = instructions.CallOperator(5)
+        call_op2 = instructions.CallOperator(5)
+        call_op3 = instructions.CallOperator(3)
+        call_op4 = CallOperator2(5)
+
+        self.assertTrue(call_op1.__eq__(call_op2))
+        self.assertFalse(call_op1.__eq__(call_op3))
+        self.assertFalse(call_op1.__eq__(call_op4))
+
+    # def test_op(self):
+    #     func = mock.Mock(return_value='value')
+    #     call_op = instructions.CallOperator(5)
+
+    #     result = call_op.op(func, 1, 2, 3, 4)
+
+    #     self.assertEqual(result, 'value')
+    #     func.assert_called_once_with(1, 2, 3, 4)
 
 
 class TestSetAuthorization(tests.TestCase):

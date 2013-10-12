@@ -611,7 +611,7 @@ class SetOperator(Operator):
         return frozenset(args)
 
 
-class CallOperator(Operator):
+class CallOperator(AbstractInstruction):
     """
     An instruction that performs a function or method call.  The top
     ``count`` elements on the stack identify the function or method
@@ -630,33 +630,63 @@ class CallOperator(Operator):
                       arguments to the callable.
         """
 
-        super(CallOperator, self).__init__(count, 'call')
+        self.count = count
 
-    def op(self, func, *args):
+    def __repr__(self):
         """
-        Call the function with the given arguments.
+        Return a representation of this instruction.  Should provide
+        enough information for a user to understand what operation
+        will be performed.
 
-        :returns: The result of calling the function.
-        """
-
-        return func(*args)
-
-    def fold(self, elems):
-        """
-        Override constant folding for function or method calls.
-        Constant folding needs to be overridden because function or
-        method calls may have side effects, and so we cannot assume
-        that a constant-folded function/method call is equivalent to
-        one executed dynamically while evaluating an expression.
-
-        :param elems: A list (or list-like object) containing the
-                      elements.
-
-        :returns: A list composed of the elements of ``elems`` plus
-                  this operator.
+        :returns: A string representation of this instruction.
         """
 
-        return [Instructions(elems[:] + [self])]
+        return 'CallOperator(%d)' % self.count
+
+    def __call__(self, ctxt):
+        """
+        Evaluate this instruction.  Replaces the ``count`` elements on
+        the top of the evaluation context stack with the single
+        element obtained by calling the function on its arguments.
+
+        :param ctxt: The evaluation context.
+        """
+
+        # Get the function and its arguments
+        args = ctxt.stack[-self.count:]
+        func = args.pop(0)
+
+        # If the function wants the context, add the context and call
+        # it; it is assumed the function will do its own updates to
+        # the context stack
+        if getattr(func, '_policies_want_context', False):
+            ctxt.stack = ctxt.stack[:-self.count]
+            func(ctxt, *args)
+        else:
+            # Call the function and update the stack
+            ctxt.stack[-self.count:] = [func(*args)]
+
+    def __hash__(self):
+        """
+        Return a hash value for this instruction.
+
+        :returns: The hash value.
+        """
+
+        return super(CallOperator, self).__hash__(self.count)
+
+    def __eq__(self, other):
+        """
+        Compare two instructions for equivalence.
+
+        :param other: Another ``AbstractInstruction`` to compare to.
+
+        :returns: A ``True`` value if the ``other`` instruction is
+                  equivalent to this one, ``False`` otherwise.
+        """
+
+        return (super(CallOperator, self).__eq__(other) and
+                self.count == other.count)
 
 
 class SetAuthorization(AbstractInstruction):
