@@ -314,6 +314,14 @@ class TestPolicy(tests.TestCase):
         self.assertEqual(pol._docs, {'name': 'doc'})
         mock_RuleDoc.assert_called_once_with('name')
 
+    def test_get_docs(self):
+        pol = policy.Policy()
+        pol._docs = {'a': 'one', 'b': 'two', 'c': 'three'}
+
+        result = pol.get_docs()
+
+        self.assertEqual(set(result), set(['one', 'two', 'three']))
+
     @mock.patch.object(pkg_resources, 'iter_entry_points', return_value=[
         mock.Mock(**{'load.side_effect': ImportError()}),
         mock.Mock(**{'load.side_effect': AttributeError()}),

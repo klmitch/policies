@@ -347,8 +347,8 @@ class Policy(collections.MutableMapping):
     def get_doc(self, name):
         """
         Retrieve a ``RuleDoc`` object from the ``Policy`` with the
-        given name.  This object contains all documentation for the
-        named rule.
+        given name.  The ``RuleDoc`` object contains all documentation
+        for the named rule.
 
         :param name: The name of the rule to retrieve the
                      documentation for.
@@ -362,6 +362,18 @@ class Policy(collections.MutableMapping):
             self._docs[name] = rules.RuleDoc(name)
 
         return self._docs[name]
+
+    def get_docs(self):
+        """
+        Retrieve all declared ``RuleDoc`` objects from the ``Policy``.
+        The ``RuleDoc`` object contains all documentation for the
+        declared rules.
+
+        :returns: A list of ``RuleDoc`` objects containing
+                  documentation for the declared rules.
+        """
+
+        return self._docs.values()
 
     def resolve(self, symbol):
         """
