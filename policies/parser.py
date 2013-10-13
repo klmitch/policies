@@ -17,6 +17,7 @@
 import logging
 
 import pyparsing
+import six
 
 from policies.instructions import *
 
@@ -72,6 +73,21 @@ def binary_construct(tokens):
     return instructions
 
 
+def str_decode(string):
+    """
+    Decode escapes in a string.
+
+    :param string: The string to decode the escapes in.
+
+    :returns: The decoded string.
+    """
+
+    if six.PY2:  # pragma: nocover
+        return string.decode('unicode-escape')
+    else:  # pragma: nocover
+        return bytes(string, 'utf-8').decode('unicode-escape')
+
+
 # Primitive values
 TRUE = pyparsing.Keyword('True').setParseAction(lambda: [Constant(True)])
 FALSE = pyparsing.Keyword('False').setParseAction(lambda: [Constant(False)])
@@ -85,8 +101,7 @@ FLOAT = (
 ).setParseAction(lambda t: [Constant(float(t[0]))])
 STR = (
     pyparsing.OneOrMore(pyparsing.quotedString)
-).setParseAction(lambda t: [Constant(''.join(
-    v[1:-1].decode('unicode-escape') for v in t))])
+).setParseAction(lambda t: [Constant(''.join(str_decode(v[1:-1]) for v in t))])
 IDENT = (
     pyparsing.Regex(r'[a-zA-Z_][a-zA-Z0-9_]*')
 ).setParseAction(lambda t: [Ident(t[0])])

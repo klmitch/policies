@@ -272,7 +272,6 @@ The following Python builtins are available:
 * ``bytes()``
 * ``callable()``
 * ``chr()``
-* ``cmp()``
 * ``complex()``
 * ``dict()``
 * ``divmod()``

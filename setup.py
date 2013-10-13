@@ -31,7 +31,7 @@ def readfile(filename):
 
 setup(
     name='policies',
-    version='0.1',
+    version='0.2',
     author='Kevin L. Mitchell',
     author_email='klmitch@mit.edu',
     url='https://github.com/klmitch/policies',
@@ -45,6 +45,7 @@ setup(
             'or later (GPLv3+)',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 3',
         'Topic :: Security',
         'Topic :: Software Development :: Interpreters',
         'Topic :: Software Development :: Libraries',

@@ -20,6 +20,7 @@ import logging
 import sys
 
 import pkg_resources
+import six
 
 from policies import authorization
 from policies import rules
@@ -128,7 +129,7 @@ class PolicyContext(object):
                          (name, exc))
                 self.reported = True
 
-            raise exc_info[0], exc_info[1], exc_info[2]
+            six.reraise(*exc_info)
         finally:
             # Pop the name off the stack of names
             self._name.pop()
@@ -152,13 +153,12 @@ class Policy(collections.MutableMapping):
     # Pre-populate the resolver cache with these special callables
     _builtins = {
         'abs': abs,
-        'basestring': basestring,
+        'basestring': six.string_types,
         'bin': bin,
         'bool': bool,
-        'bytes': bytes,
+        'bytes': six.binary_type,
         'callable': callable,
         'chr': chr,
-        'cmp': cmp,
         'complex': complex,
         'dict': dict,
         'divmod': divmod,
@@ -177,7 +177,7 @@ class Policy(collections.MutableMapping):
         'iter': iter,
         'len': len,
         'list': list,
-        'long': long,
+        'long': long if not six.PY3 else int,
         'max': max,
         'min': min,
         'next': next,
@@ -191,13 +191,13 @@ class Policy(collections.MutableMapping):
         'round': round,
         'set': set,
         'sorted': sorted,
-        'str': str,
+        'str': six.text_type,
         'sum': sum,
         'tuple': tuple,
         'type': type,
-        'unichr': unichr,
-        'unicode': unicode,
-        'xrange': xrange,
+        'unichr': six.unichr,
+        'unicode': six.text_type,
+        'xrange': range,
         'zip': zip,
     }
 
@@ -264,7 +264,7 @@ class Policy(collections.MutableMapping):
                      ``key``, or the text of the rule.
         """
 
-        if isinstance(rule, basestring):
+        if isinstance(rule, six.string_types):
             # Construct the rule from the string
             rule = rules.Rule(key, rule)
         elif key != rule.name:

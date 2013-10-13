@@ -90,3 +90,4 @@ class Authorization(object):
         """
 
         return self._result
+    __bool__ = __nonzero__

@@ -17,6 +17,8 @@
 import abc
 import operator
 
+import six
+
 from policies import authorization
 
 
@@ -34,6 +36,7 @@ __all__ = ['Instructions',
            'set_authz']
 
 
+@six.add_metaclass(abc.ABCMeta)
 class AbstractInstruction(object):
     """
     An instruction is a callable that manipulates the evaluation
@@ -41,8 +44,6 @@ class AbstractInstruction(object):
     expression using a value stack available in the evaluation
     context.
     """
-
-    __metaclass__ = abc.ABCMeta
 
     def __ne__(self, other):
         """

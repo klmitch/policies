@@ -14,12 +14,12 @@
 # along with this program.  If not, see
 # <http://www.gnu.org/licenses/>.
 
-import unittest2
+import unittest
 
 
 class TestException(Exception):
     pass
 
 
-class TestCase(unittest2.TestCase):
+class TestCase(unittest.TestCase):
     pass
