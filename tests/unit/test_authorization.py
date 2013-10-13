@@ -21,20 +21,16 @@ import tests
 
 class TestAuthorization(tests.TestCase):
     def test_init_true(self):
-        attrs = {'a': 1, 'b': 2, 'c': 3}
-        authz = authorization.Authorization(1, attrs)
+        authz = authorization.Authorization(1)
 
         self.assertEqual(authz._result, True)
-        self.assertEqual(authz._attrs, attrs)
-        self.assertNotEqual(id(authz._attrs), id(attrs))
+        self.assertEqual(authz._attrs, {})
 
     def test_init_false(self):
-        attrs = {'a': 1, 'b': 2, 'c': 3}
-        authz = authorization.Authorization('', attrs)
+        authz = authorization.Authorization('')
 
         self.assertEqual(authz._result, False)
-        self.assertEqual(authz._attrs, attrs)
-        self.assertNotEqual(id(authz._attrs), id(attrs))
+        self.assertEqual(authz._attrs, {})
 
     def test_init_attrs_indep(self):
         attrs = {'a': 1, 'b': 2, 'c': 3}

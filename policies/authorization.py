@@ -23,7 +23,7 @@ class Authorization(object):
     default to ``None`` unless another default is provided.
     """
 
-    def __init__(self, result, defaults):
+    def __init__(self, result, defaults=None):
         """
         Initialize an ``Authorization`` object.
 
@@ -36,7 +36,8 @@ class Authorization(object):
         """
 
         super(Authorization, self).__setattr__('_result', bool(result))
-        super(Authorization, self).__setattr__('_attrs', defaults.copy())
+        super(Authorization, self).__setattr__('_attrs', defaults.copy()
+                                               if defaults else {})
 
     def __getattr__(self, name):
         """
