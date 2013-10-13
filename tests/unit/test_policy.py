@@ -138,7 +138,7 @@ def item_setter(obj, item, value):
 
 class TestPolicy(tests.TestCase):
     def test_init_basic(self):
-        expected = policy.Policy._builtins.copy()
+        expected = policy.Policy.builtins.copy()
         expected['rule'] = policy.rule
 
         pol = policy.Policy()
@@ -149,7 +149,7 @@ class TestPolicy(tests.TestCase):
         self.assertEqual(pol._rules, {})
         self.assertEqual(pol._resolve_cache, expected)
         self.assertNotEqual(id(pol._resolve_cache),
-                            id(policy.Policy._builtins))
+                            id(policy.Policy.builtins))
 
     def test_init_full(self):
         builtins = {'a': 1, 'b': 2, 'c': 3}

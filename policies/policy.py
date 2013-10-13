@@ -151,7 +151,7 @@ class Policy(collections.MutableMapping):
     """
 
     # Pre-populate the resolver cache with these special callables
-    _builtins = {
+    builtins = {
         'abs': abs,
         'basestring': six.string_types,
         'bin': bin,
@@ -227,7 +227,7 @@ class Policy(collections.MutableMapping):
 
         # Seed the resolve cache
         if builtins is None:
-            builtins = self._builtins
+            builtins = self.builtins
         self._resolve_cache = builtins.copy()
 
         # Add the default rule

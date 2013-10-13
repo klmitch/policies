@@ -37,7 +37,7 @@ any application using ``policies``.
 The ``policies`` package is easy for developers to use; simply
 instantiate a ``policies.Policy`` object with an optional entrypoint
 group and dictionary of built-in functions (defaults to select Python
-builtins, available as ``policies.Policy._builtins``), then add rules
+builtins, available as ``policies.Policy.builtins``), then add rules
 to the object.  This can be done by assigning the rule text using the
 dictionary item setting syntax, like so::
 
@@ -136,11 +136,11 @@ source.
 If the variable cannot be found in the dictionary passed to
 ``policies.Policy.evaluate()``, then a dictionary of builtins is
 searched; by default, these builtins are the ones in
-``policies.Policy._builtins``, and represent a subset of the Python
+``policies.Policy.builtins``, and represent a subset of the Python
 builtins.  These builtins can be overridden by passing a dictionary as
 the ``builtins`` parameter of the ``policies.Policy`` constructor.
 Note that one special builtin exists which is not listed in
-``policies.Policy._builtins``, and which will be added to the builtins
+``policies.Policy.builtins``, and which will be added to the builtins
 passed to the ``policies.Policy`` constructor: the ``rule()`` builtin
 allows for one rule to call another.  It can be overridden, if
 desired, by passing an alternate value for the "rule" key in the
