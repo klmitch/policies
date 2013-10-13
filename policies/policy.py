@@ -66,6 +66,9 @@ class PolicyContext(object):
         self.stack = []
         self.authz = None
 
+        # Add a cache for rules
+        self.rule_cache = {}
+
         # Used to keep track of error reporting, to ensure that an
         # exception raised at one level of nesting isn't reported
         # multiple times
@@ -219,6 +222,9 @@ class Policy(collections.MutableMapping):
         if builtins is None:
             builtins = self._builtins
         self._resolve_cache = builtins.copy()
+
+        # Add the default rule
+        self._resolve_cache.setdefault('rule', rule)
 
     def __getitem__(self, key):
         """
@@ -443,3 +449,38 @@ def want_context(func):
     func._policies_want_context = True
 
     return func
+
+
+@want_context
+def rule(ctxt, name):
+    """
+    Allows evaluation of another rule while evaluating a rule.
+
+    :param ctxt: The evaluation context for the rule.
+    :param name: The name of the rule to evaluate.
+    """
+
+    # If the result of evaluation is in the rule cache, bypass
+    # evaluation
+    if name in ctxt.rule_cache:
+        ctxt.stack.append(ctxt.rule_cache[name])
+        return
+
+    # Obtain the rule we're to evaluate
+    try:
+        rule = ctxt.policy[name]
+    except KeyError:
+        # Rule doesn't exist; log a message and assume False
+        log = logging.getLogger('policies')
+        log.warn("Request to evaluate non-existant rule %r "
+                 "while evaluating rule %r" % (name, ctxt.name))
+        ctxt.stack.append(False)
+        ctxt.rule_cache[name] = False
+        return
+
+    # Evaluate the rule, stopping at the set_authz instruction
+    with ctxt.push_rule(name):
+        rule.instructions(ctxt, True)
+
+    # Cache the result
+    ctxt.rule_cache[name] = ctxt.stack[-1]

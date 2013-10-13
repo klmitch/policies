@@ -33,6 +33,7 @@ class TestPolicyContext(tests.TestCase):
         self.assertEqual(ctxt._name, [])
         self.assertEqual(ctxt.stack, [])
         self.assertEqual(ctxt.authz, None)
+        self.assertEqual(ctxt.rule_cache, {})
         self.assertEqual(ctxt.reported, False)
 
     def test_resolve_defined(self):
@@ -120,18 +121,23 @@ def item_setter(obj, item, value):
 
 class TestPolicy(tests.TestCase):
     def test_init_basic(self):
+        expected = policy.Policy._builtins.copy()
+        expected['rule'] = policy.rule
+
         pol = policy.Policy()
 
         self.assertEqual(pol._group, None)
         self.assertEqual(pol._defaults, {})
         self.assertEqual(pol._docs, {})
         self.assertEqual(pol._rules, {})
-        self.assertEqual(pol._resolve_cache, policy.Policy._builtins)
+        self.assertEqual(pol._resolve_cache, expected)
         self.assertNotEqual(id(pol._resolve_cache),
                             id(policy.Policy._builtins))
 
     def test_init_full(self):
         builtins = {'a': 1, 'b': 2, 'c': 3}
+        expected = builtins.copy()
+        expected['rule'] = policy.rule
 
         pol = policy.Policy('group', builtins)
 
@@ -139,7 +145,7 @@ class TestPolicy(tests.TestCase):
         self.assertEqual(pol._defaults, {})
         self.assertEqual(pol._docs, {})
         self.assertEqual(pol._rules, {})
-        self.assertEqual(pol._resolve_cache, builtins)
+        self.assertEqual(pol._resolve_cache, expected)
         self.assertNotEqual(id(pol._resolve_cache), id(builtins))
 
     def test_getitem_none(self):
@@ -516,6 +522,69 @@ class TestWantContext(tests.TestCase):
 
         self.assertEqual(result, func)
         self.assertEqual(result._policies_want_context, True)
+
+
+class TestRule(tests.TestCase):
+    @mock.patch('logging.getLogger')
+    def test_cached(self, mock_getLogger):
+        rule = mock.Mock()
+        ctxt = mock.Mock(**{
+            'push_rule': mock.MagicMock(),
+            'rule_cache': {'name': 'cached'},
+            'policy': {'name': rule},
+            'stack': [],
+        })
+        ctxt.name = 'parent'
+
+        policy.rule(ctxt, 'name')
+
+        self.assertFalse(rule.instructions.called)
+        self.assertFalse(ctxt.push_rule.called)
+        self.assertEqual(ctxt.rule_cache, {'name': 'cached'})
+        self.assertEqual(ctxt.stack, ['cached'])
+        self.assertFalse(mock_getLogger.called)
+
+    @mock.patch('logging.getLogger')
+    def test_missing_rule(self, mock_getLogger):
+        ctxt = mock.Mock(**{
+            'push_rule': mock.MagicMock(),
+            'rule_cache': {},
+            'policy': {},
+            'stack': [],
+        })
+        ctxt.name = 'parent'
+
+        policy.rule(ctxt, 'name')
+
+        self.assertFalse(ctxt.push_rule.called)
+        self.assertEqual(ctxt.rule_cache, {'name': False})
+        self.assertEqual(ctxt.stack, [False])
         mock_getLogger.assert_called_once_with('policies')
         mock_getLogger.return_value.warn.assert_called_once_with(
-            "Exception raised while evaluating rule 'name': test")
+            "Request to evaluate non-existant rule 'name' while evaluating "
+            "rule 'parent'")
+
+    @mock.patch('logging.getLogger')
+    def test_success(self, mock_getLogger):
+        rule = mock.Mock(**{
+            'instructions.side_effect': lambda c, s: c.stack.append('spam'),
+        })
+        ctxt = mock.Mock(**{
+            'push_rule': mock.MagicMock(),
+            'rule_cache': {},
+            'policy': {'name': rule},
+            'stack': [],
+        })
+        ctxt.name = 'parent'
+
+        policy.rule(ctxt, 'name')
+
+        rule.instructions.assert_called_once_with(ctxt, True)
+        ctxt.push_rule.assert_called_once_with('name')
+        ctxt.push_rule.return_value.assert_has_calls([
+            mock.call.__enter__(),
+            mock.call.__exit__(None, None, None),
+        ])
+        self.assertEqual(ctxt.rule_cache, {'name': 'spam'})
+        self.assertEqual(ctxt.stack, ['spam'])
+        self.assertFalse(mock_getLogger.called)
