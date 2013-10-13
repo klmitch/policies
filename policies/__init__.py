@@ -15,9 +15,10 @@
 # <http://www.gnu.org/licenses/>.
 
 from policies.authorization import Authorization
-from policies.policy import Policy, PolicyException, want_context
-from policies.rules import Rule
+from policies.policy import (Policy, PolicyException,
+                             PolicyContext, want_context)
+from policies.rules import Rule, RuleDoc
 
 
-__all__ = ['Authorization', 'Policy', 'PolicyException', 'Rule',
-           'want_context']
+__all__ = ['Authorization', 'Policy', 'PolicyException', 'Rule', 'RuleDoc',
+           'PolicyContext', 'want_context']
