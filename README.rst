@@ -338,6 +338,17 @@ would be::
 
     ctxt.stack.append("value")
 
+In instances where you're using functions decorated with
+``@policies.want_context``, it may be necessary to perform some
+application-specific initialization on the ``policies.PolicyContext``
+class, such as initializing a context attribute.  This may be done by
+changing the ``policies.Policy.context_class`` setting.  Ideally, this
+would be on an instance of ``policies.Policy``, rather than altering
+the class itself, i.e.::
+
+    policy = policies.Policy(...)
+    policy.context_class = MyPolicyContext
+
 Be very careful using ``@policies.want_context``.  Failing to push a
 function return value onto the evaluation context stack could corrupt
 the stack and cause a crash during rule evaluation.

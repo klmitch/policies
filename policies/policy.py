@@ -201,6 +201,9 @@ class Policy(collections.MutableMapping):
         'zip': zip,
     }
 
+    # The context class to use
+    context_class = PolicyContext
+
     def __init__(self, group=None, builtins=None):
         """
         Initialize a ``Policy`` object.
@@ -441,7 +444,7 @@ class Policy(collections.MutableMapping):
             rule = default
 
         # Construct the context
-        ctxt = PolicyContext(self, attrs, variables or {})
+        ctxt = self.context_class(self, attrs, variables or {})
 
         # Execute the rule
         try:

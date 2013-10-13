@@ -381,7 +381,7 @@ class TestPolicy(tests.TestCase):
 
     @mock.patch('logging.getLogger')
     @mock.patch('policies.authorization.Authorization', return_value='authz')
-    @mock.patch.object(policy, 'PolicyContext',
+    @mock.patch.object(policy.Policy, 'context_class',
                        return_value=mock.Mock(authz='ctxt_authz'))
     def test_evaluate_norule(self, mock_PolicyContext, mock_Authorization,
                              mock_getLogger):
@@ -396,7 +396,7 @@ class TestPolicy(tests.TestCase):
 
     @mock.patch('logging.getLogger')
     @mock.patch('policies.authorization.Authorization', return_value='authz')
-    @mock.patch.object(policy, 'PolicyContext',
+    @mock.patch.object(policy.Policy, 'context_class',
                        return_value=mock.Mock(**{
                            'authz': 'ctxt_authz',
                            'push_rule.return_value': mock.MagicMock(),
@@ -423,7 +423,7 @@ class TestPolicy(tests.TestCase):
 
     @mock.patch('logging.getLogger')
     @mock.patch('policies.authorization.Authorization', return_value='authz')
-    @mock.patch.object(policy, 'PolicyContext',
+    @mock.patch.object(policy.Policy, 'context_class',
                        return_value=mock.Mock(**{
                            'authz': 'ctxt_authz',
                            'push_rule.return_value': mock.MagicMock(),
@@ -450,7 +450,7 @@ class TestPolicy(tests.TestCase):
 
     @mock.patch('logging.getLogger')
     @mock.patch('policies.authorization.Authorization', return_value='authz')
-    @mock.patch.object(policy, 'PolicyContext',
+    @mock.patch.object(policy.Policy, 'context_class',
                        return_value=mock.Mock(**{
                            'authz': 'ctxt_authz',
                            'push_rule.return_value': mock.MagicMock(),
@@ -481,7 +481,7 @@ class TestPolicy(tests.TestCase):
 
     @mock.patch('logging.getLogger')
     @mock.patch('policies.authorization.Authorization', return_value='authz')
-    @mock.patch.object(policy, 'PolicyContext',
+    @mock.patch.object(policy.Policy, 'context_class',
                        return_value=mock.Mock(**{
                            'authz': 'ctxt_authz',
                            'push_rule.return_value': mock.MagicMock(),
@@ -509,7 +509,7 @@ class TestPolicy(tests.TestCase):
 
     @mock.patch('logging.getLogger')
     @mock.patch('policies.authorization.Authorization', return_value='authz')
-    @mock.patch.object(policy, 'PolicyContext',
+    @mock.patch.object(policy.Policy, 'context_class',
                        return_value=mock.Mock(**{
                            'authz': 'ctxt_authz',
                            'push_rule.return_value': mock.MagicMock(),
