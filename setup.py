@@ -39,17 +39,17 @@ setup(
     long_description=readfile('README.rst'),
     license='GNU General Public License v3 or later (GPLv3+)',
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: GNU General Public License v3 '
             'or later (GPLv3+)',
         'Operating System :: OS Independent',
-        'Programming Language :: Python',
+        'Programming Language :: Python :: 2',
+        'Topic :: Security',
+        'Topic :: Software Development :: Interpreters',
         'Topic :: Software Development :: Libraries',
     ],
     packages=['policies'],
     install_requires=readreq('requirements.txt'),
     tests_require=readreq('test-requirements.txt'),
-    entry_points={
-    },
 )
