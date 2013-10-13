@@ -30,8 +30,10 @@ class TestPolicyContext(tests.TestCase):
         self.assertEqual(ctxt.policy, 'policy')
         self.assertEqual(ctxt.attrs, 'attrs')
         self.assertEqual(ctxt.variables, 'variables')
+        self.assertEqual(ctxt._name, [])
         self.assertEqual(ctxt.stack, [])
         self.assertEqual(ctxt.authz, None)
+        self.assertEqual(ctxt.reported, False)
 
     def test_resolve_defined(self):
         pol = mock.Mock()
@@ -50,6 +52,66 @@ class TestPolicyContext(tests.TestCase):
 
         self.assertEqual(result, 'value')
         pol.resolve.assert_called_once_with('b')
+
+    @mock.patch('logging.getLogger')
+    def test_push_rule_success(self, mock_getLogger):
+        ctxt = policy.PolicyContext('policy', 'attrs', 'variables')
+        ctxt._name = ['rule1', 'rule2']
+
+        with ctxt.push_rule('rule3'):
+            self.assertEqual(ctxt._name, ['rule1', 'rule2', 'rule3'])
+
+        self.assertEqual(ctxt._name, ['rule1', 'rule2'])
+        self.assertEqual(ctxt.reported, False)
+        self.assertFalse(mock_getLogger.called)
+
+    @mock.patch('logging.getLogger')
+    def test_push_rule_failure_reported(self, mock_getLogger):
+        ctxt = policy.PolicyContext('policy', 'attrs', 'variables')
+        ctxt._name = ['rule1', 'rule2']
+        ctxt.reported = True
+
+        try:
+            with ctxt.push_rule('rule3'):
+                raise tests.TestException('test')
+        except tests.TestException:
+            pass
+        else:
+            self.fail("TestException failed to bubble up")
+
+        self.assertEqual(ctxt._name, ['rule1', 'rule2'])
+        self.assertEqual(ctxt.reported, True)
+        self.assertFalse(mock_getLogger.called)
+
+    @mock.patch('logging.getLogger')
+    def test_push_rule_failure_unreported(self, mock_getLogger):
+        ctxt = policy.PolicyContext('policy', 'attrs', 'variables')
+        ctxt._name = ['rule1', 'rule2']
+
+        try:
+            with ctxt.push_rule('rule3'):
+                raise tests.TestException('test')
+        except tests.TestException:
+            pass
+        else:
+            self.fail("TestException failed to bubble up")
+
+        self.assertEqual(ctxt._name, ['rule1', 'rule2'])
+        self.assertEqual(ctxt.reported, True)
+        mock_getLogger.assert_called_once_with('policies')
+        mock_getLogger.return_value.warn.assert_called_once_with(
+            "Exception raised while evaluating rule 'rule3': test")
+
+    def test_name_defined(self):
+        ctxt = policy.PolicyContext('policy', 'attrs', 'variables')
+        ctxt._name = ['rule1', 'rule2']
+
+        self.assertEqual(ctxt.name, 'rule2')
+
+    def test_name_undefined(self):
+        ctxt = policy.PolicyContext('policy', 'attrs', 'variables')
+
+        self.assertEqual(ctxt.name, None)
 
 
 def item_setter(obj, item, value):
@@ -304,9 +366,13 @@ class TestPolicy(tests.TestCase):
     @mock.patch('logging.getLogger')
     @mock.patch('policies.authorization.Authorization', return_value='authz')
     @mock.patch.object(policy, 'PolicyContext',
-                       return_value=mock.Mock(authz='ctxt_authz'))
+                       return_value=mock.Mock(**{
+                           'authz': 'ctxt_authz',
+                           'push_rule.return_value': mock.MagicMock(),
+                       }))
     def test_evaluate_default(self, mock_PolicyContext, mock_Authorization,
                               mock_getLogger):
+        ctxt = mock_PolicyContext.return_value
         default = mock.Mock(attrs={'a': 1})
         pol = policy.Policy()
         pol._defaults['name'] = default
@@ -316,16 +382,24 @@ class TestPolicy(tests.TestCase):
         self.assertEqual(result, 'ctxt_authz')
         self.assertFalse(mock_Authorization.called)
         mock_PolicyContext.assert_called_once_with(pol, {'a': 1}, {})
+        ctxt.push_rule.assert_called_once_with('name')
+        ctxt.push_rule.return_value.assert_has_calls([
+            mock.call.__enter__(),
+            mock.call.__exit__(None, None, None),
+        ])
         default.instructions.assert_called_once_with(
             mock_PolicyContext.return_value)
-        self.assertFalse(mock_getLogger.called)
 
     @mock.patch('logging.getLogger')
     @mock.patch('policies.authorization.Authorization', return_value='authz')
     @mock.patch.object(policy, 'PolicyContext',
-                       return_value=mock.Mock(authz='ctxt_authz'))
+                       return_value=mock.Mock(**{
+                           'authz': 'ctxt_authz',
+                           'push_rule.return_value': mock.MagicMock(),
+                       }))
     def test_evaluate_rule(self, mock_PolicyContext, mock_Authorization,
                            mock_getLogger):
+        ctxt = mock_PolicyContext.return_value
         rule = mock.Mock(attrs={'a': 1})
         pol = policy.Policy()
         pol._rules['name'] = rule
@@ -335,16 +409,24 @@ class TestPolicy(tests.TestCase):
         self.assertEqual(result, 'ctxt_authz')
         self.assertFalse(mock_Authorization.called)
         mock_PolicyContext.assert_called_once_with(pol, {'a': 1}, {})
+        ctxt.push_rule.assert_called_once_with('name')
+        ctxt.push_rule.return_value.assert_has_calls([
+            mock.call.__enter__(),
+            mock.call.__exit__(None, None, None),
+        ])
         rule.instructions.assert_called_once_with(
             mock_PolicyContext.return_value)
-        self.assertFalse(mock_getLogger.called)
 
     @mock.patch('logging.getLogger')
     @mock.patch('policies.authorization.Authorization', return_value='authz')
     @mock.patch.object(policy, 'PolicyContext',
-                       return_value=mock.Mock(authz='ctxt_authz'))
+                       return_value=mock.Mock(**{
+                           'authz': 'ctxt_authz',
+                           'push_rule.return_value': mock.MagicMock(),
+                       }))
     def test_evaluate_both(self, mock_PolicyContext, mock_Authorization,
                            mock_getLogger):
+        ctxt = mock_PolicyContext.return_value
         rule = mock.Mock(attrs={'a': 1, 'b': 2})
         default = mock.Mock(attrs={'b': 3, 'c': 4})
         pol = policy.Policy()
@@ -357,17 +439,25 @@ class TestPolicy(tests.TestCase):
         self.assertFalse(mock_Authorization.called)
         mock_PolicyContext.assert_called_once_with(
             pol, {'a': 1, 'b': 2, 'c': 4}, {})
+        ctxt.push_rule.assert_called_once_with('name')
+        ctxt.push_rule.return_value.assert_has_calls([
+            mock.call.__enter__(),
+            mock.call.__exit__(None, None, None),
+        ])
         rule.instructions.assert_called_once_with(
             mock_PolicyContext.return_value)
         self.assertFalse(default.instructions.called)
-        self.assertFalse(mock_getLogger.called)
 
     @mock.patch('logging.getLogger')
     @mock.patch('policies.authorization.Authorization', return_value='authz')
     @mock.patch.object(policy, 'PolicyContext',
-                       return_value=mock.Mock(authz='ctxt_authz'))
+                       return_value=mock.Mock(**{
+                           'authz': 'ctxt_authz',
+                           'push_rule.return_value': mock.MagicMock(),
+                       }))
     def test_evaluate_variables(self, mock_PolicyContext, mock_Authorization,
                                 mock_getLogger):
+        ctxt = mock_PolicyContext.return_value
         rule = mock.Mock(attrs={'a': 1})
         pol = policy.Policy()
         pol._rules['name'] = rule
@@ -378,16 +468,24 @@ class TestPolicy(tests.TestCase):
         self.assertFalse(mock_Authorization.called)
         mock_PolicyContext.assert_called_once_with(
             pol, {'a': 1}, {'x': 23, 'y': 24, 'z': 25})
+        ctxt.push_rule.assert_called_once_with('name')
+        ctxt.push_rule.return_value.assert_has_calls([
+            mock.call.__enter__(),
+            mock.call.__exit__(None, None, None),
+        ])
         rule.instructions.assert_called_once_with(
             mock_PolicyContext.return_value)
-        self.assertFalse(mock_getLogger.called)
 
     @mock.patch('logging.getLogger')
     @mock.patch('policies.authorization.Authorization', return_value='authz')
     @mock.patch.object(policy, 'PolicyContext',
-                       return_value=mock.Mock(authz='ctxt_authz'))
+                       return_value=mock.Mock(**{
+                           'authz': 'ctxt_authz',
+                           'push_rule.return_value': mock.MagicMock(),
+                       }))
     def test_evaluate_exception(self, mock_PolicyContext, mock_Authorization,
                                 mock_getLogger):
+        ctxt = mock_PolicyContext.return_value
         rule = mock.Mock(**{
             'attrs': {'a': 1},
             'instructions.side_effect': tests.TestException("test"),
@@ -400,8 +498,24 @@ class TestPolicy(tests.TestCase):
         self.assertEqual(result, 'authz')
         mock_Authorization.assert_called_once_with(False, {'a': 1})
         mock_PolicyContext.assert_called_once_with(pol, {'a': 1}, {})
+        ctxt.push_rule.assert_called_once_with('name')
+        ctxt.push_rule.return_value.assert_has_calls([
+            mock.call.__enter__(),
+            mock.call.__exit__(tests.TestException, mock.ANY, mock.ANY),
+        ])
         rule.instructions.assert_called_once_with(
             mock_PolicyContext.return_value)
+
+
+class TestWantContext(tests.TestCase):
+    def test_decorator(self):
+        def func():
+            pass
+
+        result = policy.want_context(func)
+
+        self.assertEqual(result, func)
+        self.assertEqual(result._policies_want_context, True)
         mock_getLogger.assert_called_once_with('policies')
         mock_getLogger.return_value.warn.assert_called_once_with(
             "Exception raised while evaluating rule 'name': test")

@@ -15,7 +15,9 @@
 # <http://www.gnu.org/licenses/>.
 
 import collections
+import contextlib
 import logging
+import sys
 
 import pkg_resources
 
@@ -60,8 +62,14 @@ class PolicyContext(object):
         self.variables = variables
 
         # Set up the stack
+        self._name = []
         self.stack = []
         self.authz = None
+
+        # Used to keep track of error reporting, to ensure that an
+        # exception raised at one level of nesting isn't reported
+        # multiple times
+        self.reported = False
 
     def resolve(self, symbol):
         """
@@ -81,6 +89,47 @@ class PolicyContext(object):
             return self.variables[symbol]
 
         return self.policy.resolve(symbol)
+
+    @contextlib.contextmanager
+    def push_rule(self, name):
+        """
+        Allow one rule to be evaluated in the context of another.
+        This allows keeping track of the rule names during nested rule
+        evaluation.
+
+        :param name: The name of the nested rule to be evaluated.
+
+        :returns: A context manager, suitable for use with the
+                  ``with`` statement.  No value is generated.
+        """
+
+        # Save the name temporarily
+        self._name.append(name)
+        try:
+            yield
+        except Exception as exc:
+            exc_info = sys.exc_info()
+
+            # Report only if we haven't reported it yet
+            if not self.reported:
+                # Get the logger and emit a log message
+                log = logging.getLogger('policies')
+                log.warn("Exception raised while evaluating rule %r: %s" %
+                         (name, exc))
+                self.reported = True
+
+            raise exc_info[0], exc_info[1], exc_info[2]
+        finally:
+            # Pop the name off the stack of names
+            self._name.pop()
+
+    @property
+    def name(self):
+        """
+        Retrieve the name of the rule being evaluated.
+        """
+
+        return self._name[-1] if self._name else None
 
 
 class Policy(collections.MutableMapping):
@@ -371,15 +420,26 @@ class Policy(collections.MutableMapping):
 
         # Execute the rule
         try:
-            rule.instructions(ctxt)
+            with ctxt.push_rule(name):
+                rule.instructions(ctxt)
         except Exception as exc:
-            # Get the logger and emit a log message
-            log = logging.getLogger('policies')
-            log.warn("Exception raised while evaluating rule %r: %s" %
-                     (name, exc))
-
             # Fail closed
             return authorization.Authorization(False, attrs)
 
         # Return the authorization result
         return ctxt.authz
+
+
+def want_context(func):
+    """
+    A decorator that marks a policy function as wanting the evaluation
+    context object.
+
+    :param func: The function to be decorated.
+
+    :returns: The decorated function.
+    """
+
+    func._policies_want_context = True
+
+    return func
