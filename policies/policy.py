@@ -106,6 +106,13 @@ class PolicyContext(object):
                   ``with`` statement.  No value is generated.
         """
 
+        # Verify that we haven't been evaluating the rule already;
+        # this is to prohibit recursive rules from locking us up...
+        if name in self._name:
+            raise PolicyException(
+                "Rule recursion detected; invocation chain: %s -> %s" %
+                (' -> '.join(self._name), name))
+
         # Save the name temporarily
         self._name.append(name)
         try:

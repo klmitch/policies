@@ -103,6 +103,23 @@ class TestPolicyContext(tests.TestCase):
         mock_getLogger.return_value.warn.assert_called_once_with(
             "Exception raised while evaluating rule 'rule3': test")
 
+    @mock.patch('logging.getLogger')
+    def test_push_rule_recursion(self, mock_getLogger):
+        ctxt = policy.PolicyContext('policy', 'attrs', 'variables')
+        ctxt._name = ['rule1', 'rule2', 'rule3', 'rule4']
+
+        try:
+            with ctxt.push_rule('rule2'):
+                pass
+        except policy.PolicyException:
+            pass
+        else:
+            self.fail("Failed to detect rule recursion")
+
+        self.assertEqual(ctxt._name, ['rule1', 'rule2', 'rule3', 'rule4'])
+        self.assertEqual(ctxt.reported, False)
+        self.assertFalse(mock_getLogger.called)
+
     def test_name_defined(self):
         ctxt = policy.PolicyContext('policy', 'attrs', 'variables')
         ctxt._name = ['rule1', 'rule2']
