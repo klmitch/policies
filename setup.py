@@ -31,7 +31,7 @@ def readfile(filename):
 
 setup(
     name='policies',
-    version='0.2',
+    version='0.2.1',
     author='Kevin L. Mitchell',
     author_email='klmitch@mit.edu',
     url='https://github.com/klmitch/policies',

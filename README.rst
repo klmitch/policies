@@ -313,9 +313,6 @@ The following Python builtins are available:
 * ``xrange()``
 * ``zip()``
 
-Expect some changes to this list in later versions of ``policies`` as
-support for Python 3 is added.
-
 Advanced Function Calls
 =======================
 
