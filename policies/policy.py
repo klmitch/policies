@@ -378,6 +378,33 @@ class Policy(collections.MutableMapping):
 
         return self._docs.values()
 
+    def declared(self, name):
+        """
+        Determine if a given rule has been declared.
+
+        :param name: The name of the default rule to check for.
+
+        :returns: ``True`` if the rule has been declared, ``False``
+                  otherwise.  Note that this can return ``False`` for
+                  rules which have been added; this only tests if the
+                  ``declare()`` method has been called with the given
+                  ``name``.
+        """
+
+        return name in self._defaults
+
+    def get_default(self, name):
+        """
+        Retrieve a default ``Rule`` given its name.  Raises a
+        ``KeyError`` if the rule has not been declared.
+
+        :param name: The name of the default rule to get.
+
+        :returns: The ``Rule`` object describing the default rule.
+        """
+
+        return self._defaults[name]
+
     def resolve(self, symbol):
         """
         Resolve a symbol using the entrypoint group.

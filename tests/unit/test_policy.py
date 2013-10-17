@@ -322,6 +322,26 @@ class TestPolicy(tests.TestCase):
 
         self.assertEqual(set(result), set(['one', 'two', 'three']))
 
+    def test_declared(self):
+        pol = policy.Policy()
+        pol._defaults = {'a': 'one'}
+
+        self.assertTrue(pol.declared('a'))
+        self.assertFalse(pol.declared('b'))
+
+    def test_get_default_declared(self):
+        pol = policy.Policy()
+        pol._defaults = {'a': 'one'}
+
+        result = pol.get_default('a')
+
+        self.assertEqual(result, 'one')
+
+    def test_get_default_undeclared(self):
+        pol = policy.Policy()
+
+        self.assertRaises(KeyError, pol.get_default, 'a')
+
     @mock.patch.object(pkg_resources, 'iter_entry_points', return_value=[
         mock.Mock(**{'load.side_effect': ImportError()}),
         mock.Mock(**{'load.side_effect': AttributeError()}),
