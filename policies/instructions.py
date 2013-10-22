@@ -25,6 +25,7 @@ from policies import authorization
 __all__ = ['Instructions', 'Jump', 'JumpIf', 'JumpIfNot',
            'Constant', 'Attribute', 'Ident', 'SetOperator', 'CallOperator',
            'AuthorizationAttr',
+           'pop',
            'inv_op', 'pos_op', 'neg_op', 'not_op',
            'pow_op', 'mul_op', 'true_div_op', 'floor_div_op', 'mod_op',
            'add_op', 'sub_op', 'left_shift_op', 'right_shift_op',
@@ -302,6 +303,55 @@ class JumpIfNot(Jump):
 
         if not ctxt.stack[-1]:
             super(JumpIfNot, self).__call__(ctxt)
+
+
+class Pop(AbstractInstruction):
+    """
+    An instruction that simply discards a value from the top of the
+    stack.
+    """
+
+    def __repr__(self):
+        """
+        Return a representation of this instruction.  Should provide
+        enough information for a user to understand what operation
+        will be performed.
+
+        :returns: A string representation of this instruction.
+        """
+
+        return 'Pop()'
+
+    def __call__(self, ctxt):
+        """
+        Evaluate this instruction.  Discards the element at the top of
+        the stack.
+
+        :param ctxt: The evaluation context.
+        """
+
+        ctxt.stack.pop()
+
+    def __hash__(self):
+        """
+        Return a hash value for this instruction.
+
+        :returns: The hash value.
+        """
+
+        return super(Pop, self).__hash__()
+
+    def __eq__(self, other):
+        """
+        Compare two instructions for equivalence.
+
+        :param other: Another ``AbstractInstruction`` to compare to.
+
+        :returns: A ``True`` value if the ``other`` instruction is
+                  equivalent to this one, ``False`` otherwise.
+        """
+
+        return super(Pop, self).__eq__(other)
 
 
 class Constant(AbstractInstruction):
@@ -911,6 +961,9 @@ class AuthorizationAttr(AbstractInstruction):
         return (super(AuthorizationAttr, self).__eq__(other) and
                 self.attribute == other.attribute)
 
+
+# The pop instruction
+pop = Pop()
 
 # Unary operators
 inv_op = GenericOperator(1, operator.inv, '~')

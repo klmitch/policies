@@ -252,6 +252,38 @@ class TestJumpIfNot(tests.TestCase):
         self.assertEqual(ctxt.stack, ['!'])
 
 
+class TestPop(tests.TestCase):
+    def test_repr(self):
+        pop = instructions.Pop()
+
+        self.assertEqual(repr(pop), "Pop()")
+
+    def test_call(self):
+        ctxt = mock.Mock(stack=[1, 2])
+        pop = instructions.Pop()
+
+        pop(ctxt)
+
+        self.assertEqual(ctxt.stack, [1])
+
+    def test_hash(self):
+        pop = instructions.Pop()
+
+        self.assertEqual(hash(pop),
+                         hash((instructions.Pop,)))
+
+    def test_eq(self):
+        class Pop2(instructions.Pop):
+            pass
+
+        pop1 = instructions.Pop()
+        pop2 = instructions.Pop()
+        pop3 = Pop2()
+
+        self.assertTrue(pop1.__eq__(pop2))
+        self.assertFalse(pop1.__eq__(pop3))
+
+
 class TestConstant(tests.TestCase):
     def test_init(self):
         constant = instructions.Constant('value')
