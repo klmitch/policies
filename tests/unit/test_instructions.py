@@ -633,15 +633,6 @@ class TestCallOperator(tests.TestCase):
         self.assertFalse(call_op1.__eq__(call_op3))
         self.assertFalse(call_op1.__eq__(call_op4))
 
-    # def test_op(self):
-    #     func = mock.Mock(return_value='value')
-    #     call_op = instructions.CallOperator(5)
-
-    #     result = call_op.op(func, 1, 2, 3, 4)
-
-    #     self.assertEqual(result, 'value')
-    #     func.assert_called_once_with(1, 2, 3, 4)
-
 
 class TestSetAuthorization(tests.TestCase):
     def test_repr(self):
