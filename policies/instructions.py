@@ -147,12 +147,19 @@ class Instructions(AbstractInstruction):
                          only evaluate the expression in a rule.
         """
 
-        for inst in self.instructions:
+        while ctxt.pc < len(self.instructions):
             # Allows for evaluating only the expression of a rule
-            if no_authz and inst == set_authz:
+            if no_authz and self.instructions[ctxt.pc] == set_authz:
                 break
 
-            inst(ctxt)
+            # Default jump
+            ctxt.step = 1
+
+            # Execute the addressed instruction
+            self.instructions[ctxt.pc](ctxt)
+
+            # Advance to the next instruction
+            ctxt.pc += ctxt.step
 
     def __hash__(self):
         """

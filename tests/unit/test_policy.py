@@ -33,6 +33,8 @@ class TestPolicyContext(tests.TestCase):
         self.assertEqual(ctxt._name, [])
         self.assertEqual(ctxt.stack, [])
         self.assertEqual(ctxt.authz, None)
+        self.assertEqual(ctxt._pc, [])
+        self.assertEqual(ctxt._step, [])
         self.assertEqual(ctxt.rule_cache, {})
         self.assertEqual(ctxt.reported, False)
 
@@ -58,11 +60,17 @@ class TestPolicyContext(tests.TestCase):
     def test_push_rule_success(self, mock_getLogger):
         ctxt = policy.PolicyContext('policy', 'attrs', 'variables')
         ctxt._name = ['rule1', 'rule2']
+        ctxt._pc = [2, 5]
+        ctxt._step = [1, 3]
 
         with ctxt.push_rule('rule3'):
             self.assertEqual(ctxt._name, ['rule1', 'rule2', 'rule3'])
+            self.assertEqual(ctxt._pc, [2, 5, 0])
+            self.assertEqual(ctxt._step, [1, 3, 1])
 
         self.assertEqual(ctxt._name, ['rule1', 'rule2'])
+        self.assertEqual(ctxt._pc, [2, 5])
+        self.assertEqual(ctxt._step, [1, 3])
         self.assertEqual(ctxt.reported, False)
         self.assertFalse(mock_getLogger.called)
 
@@ -70,6 +78,8 @@ class TestPolicyContext(tests.TestCase):
     def test_push_rule_failure_reported(self, mock_getLogger):
         ctxt = policy.PolicyContext('policy', 'attrs', 'variables')
         ctxt._name = ['rule1', 'rule2']
+        ctxt._pc = [2, 5]
+        ctxt._step = [1, 3]
         ctxt.reported = True
 
         try:
@@ -81,6 +91,8 @@ class TestPolicyContext(tests.TestCase):
             self.fail("TestException failed to bubble up")
 
         self.assertEqual(ctxt._name, ['rule1', 'rule2'])
+        self.assertEqual(ctxt._pc, [2, 5])
+        self.assertEqual(ctxt._step, [1, 3])
         self.assertEqual(ctxt.reported, True)
         self.assertFalse(mock_getLogger.called)
 
@@ -88,6 +100,8 @@ class TestPolicyContext(tests.TestCase):
     def test_push_rule_failure_unreported(self, mock_getLogger):
         ctxt = policy.PolicyContext('policy', 'attrs', 'variables')
         ctxt._name = ['rule1', 'rule2']
+        ctxt._pc = [2, 5]
+        ctxt._step = [1, 3]
 
         try:
             with ctxt.push_rule('rule3'):
@@ -98,6 +112,8 @@ class TestPolicyContext(tests.TestCase):
             self.fail("TestException failed to bubble up")
 
         self.assertEqual(ctxt._name, ['rule1', 'rule2'])
+        self.assertEqual(ctxt._pc, [2, 5])
+        self.assertEqual(ctxt._step, [1, 3])
         self.assertEqual(ctxt.reported, True)
         mock_getLogger.assert_called_once_with('policies')
         mock_getLogger.return_value.warn.assert_called_once_with(
@@ -107,6 +123,8 @@ class TestPolicyContext(tests.TestCase):
     def test_push_rule_recursion(self, mock_getLogger):
         ctxt = policy.PolicyContext('policy', 'attrs', 'variables')
         ctxt._name = ['rule1', 'rule2', 'rule3', 'rule4']
+        ctxt._pc = [2, 5, 3, 7]
+        ctxt._step = [1, 3, 2, 1]
 
         try:
             with ctxt.push_rule('rule2'):
@@ -117,6 +135,8 @@ class TestPolicyContext(tests.TestCase):
             self.fail("Failed to detect rule recursion")
 
         self.assertEqual(ctxt._name, ['rule1', 'rule2', 'rule3', 'rule4'])
+        self.assertEqual(ctxt._pc, [2, 5, 3, 7])
+        self.assertEqual(ctxt._step, [1, 3, 2, 1])
         self.assertEqual(ctxt.reported, False)
         self.assertFalse(mock_getLogger.called)
 
@@ -130,6 +150,54 @@ class TestPolicyContext(tests.TestCase):
         ctxt = policy.PolicyContext('policy', 'attrs', 'variables')
 
         self.assertEqual(ctxt.name, None)
+
+    def test_pc_defined(self):
+        ctxt = policy.PolicyContext('policy', 'attrs', 'variables')
+        ctxt._pc = [2, 5]
+
+        self.assertEqual(ctxt.pc, 5)
+
+    def test_pc_undefined(self):
+        ctxt = policy.PolicyContext('policy', 'attrs', 'variables')
+
+        self.assertEqual(ctxt.pc, 0)
+
+    def test_pc_setter_defined(self):
+        ctxt = policy.PolicyContext('policy', 'attrs', 'variables')
+        ctxt._pc = [2, 5]
+
+        ctxt.pc = 3
+
+        self.assertEqual(ctxt._pc, [2, 3])
+
+    def test_pc_setter_undefined(self):
+        ctxt = policy.PolicyContext('policy', 'attrs', 'variables')
+
+        self.assertRaises(AttributeError, setattr, ctxt, 'pc', 3)
+
+    def test_step_defined(self):
+        ctxt = policy.PolicyContext('policy', 'attrs', 'variables')
+        ctxt._step = [2, 5]
+
+        self.assertEqual(ctxt.step, 5)
+
+    def test_step_undefined(self):
+        ctxt = policy.PolicyContext('policy', 'attrs', 'variables')
+
+        self.assertEqual(ctxt.step, 1)
+
+    def test_step_setter_defined(self):
+        ctxt = policy.PolicyContext('policy', 'attrs', 'variables')
+        ctxt._step = [2, 5]
+
+        ctxt.step = 3
+
+        self.assertEqual(ctxt._step, [2, 3])
+
+    def test_step_setter_undefined(self):
+        ctxt = policy.PolicyContext('policy', 'attrs', 'variables')
+
+        self.assertRaises(AttributeError, setattr, ctxt, 'step', 3)
 
 
 def item_setter(obj, item, value):

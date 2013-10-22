@@ -67,6 +67,10 @@ class PolicyContext(object):
         self.stack = []
         self.authz = None
 
+        # Set up the program counter
+        self._pc = []
+        self._step = []
+
         # Add a cache for rules
         self.rule_cache = {}
 
@@ -114,8 +118,11 @@ class PolicyContext(object):
                 "Rule recursion detected; invocation chain: %s -> %s" %
                 (' -> '.join(self._name), name))
 
-        # Save the name temporarily
+        # Save the name temporarily, and set up the program counter
+        # and step
         self._name.append(name)
+        self._pc.append(0)
+        self._step.append(1)
         try:
             yield
         except Exception as exc:
@@ -131,8 +138,11 @@ class PolicyContext(object):
 
             six.reraise(*exc_info)
         finally:
-            # Pop the name off the stack of names
+            # Pop the name off the stack of names and restore program
+            # counter and step
             self._name.pop()
+            self._pc.pop()
+            self._step.pop()
 
     @property
     def name(self):
@@ -141,6 +151,55 @@ class PolicyContext(object):
         """
 
         return self._name[-1] if self._name else None
+
+    @property
+    def pc(self):
+        """
+        Retrieve the program counter for processing this rule.
+        """
+
+        return self._pc[-1] if self._pc else 0
+
+    @pc.setter
+    def pc(self, value):
+        """
+        Advance the program counter for processing this rule.
+
+        :param value: The new value of the program counter.
+        """
+
+        # Make sure we have somewhere to store the value
+        if not self._pc:
+            raise AttributeError(
+                "Cannot set 'pc' attribute without a push_rule() call")
+
+        self._pc[-1] = value
+
+    @property
+    def step(self):
+        """
+        Retrieve the program counter step increment for processing
+        this rule.
+        """
+
+        return self._step[-1] if self._step else 1
+
+    @step.setter
+    def step(self, value):
+        """
+        Alter the program counter step increment for processing this
+        rule.
+
+        :param value: The new value of the program counter step
+                      increment.
+        """
+
+        # Make sure we have somewhere to store the value
+        if not self._step:
+            raise AttributeError(
+                "Cannot set 'step' attribute without a push_rule() call")
+
+        self._step[-1] = value
 
 
 class Policy(collections.MutableMapping):
