@@ -22,7 +22,7 @@ import six
 from policies import authorization
 
 
-__all__ = ['Instructions',
+__all__ = ['Instructions', 'Jump', 'JumpIf', 'JumpIfNot',
            'Constant', 'Attribute', 'Ident', 'SetOperator', 'CallOperator',
            'AuthorizationAttr',
            'inv_op', 'pos_op', 'neg_op', 'not_op',
@@ -203,6 +203,105 @@ class Instructions(AbstractInstruction):
                     yield sub_inst
             else:
                 yield inst
+
+
+class Jump(AbstractInstruction):
+    """
+    An instruction that causes an unconditional jump over a number of
+    other instructions.
+    """
+
+    def __init__(self, count):
+        """
+        Initialize a ``Jump`` object.
+
+        :param count: The number of instructions to jump over.
+        """
+
+        self.count = count
+
+    def __repr__(self):
+        """
+        Return a representation of this instruction.  Should provide
+        enough information for a user to understand what operation
+        will be performed.
+
+        :returns: A string representation of this instruction.
+        """
+
+        return "%s(%r)" % (self.__class__.__name__, self.count)
+
+    def __call__(self, ctxt):
+        """
+        Evaluate this instruction.  Increments the program counter
+        step by the number of instructions to jump over.
+
+        :param ctxt: The evaluation context.
+        """
+
+        ctxt.step += self.count
+
+    def __hash__(self):
+        """
+        Return a hash value for this instruction.
+
+        :returns: The hash value.
+        """
+
+        return super(Jump, self).__hash__(self.count)
+
+    def __eq__(self, other):
+        """
+        Compare two instructions for equivalence.
+
+        :param other: Another ``AbstractInstruction`` to compare to.
+
+        :returns: A ``True`` value if the ``other`` instruction is
+                  equivalent to this one, ``False`` otherwise.
+        """
+
+        return (super(Jump, self).__eq__(other) and
+                self.count == other.count)
+
+
+class JumpIf(Jump):
+    """
+    An instruction that causes a jump, conditional on the value on the
+    top of the stack.  The value is left on the stack.
+    """
+
+    def __call__(self, ctxt):
+        """
+        Evaluate this instruction.  Increments the program counter
+        step by the number of instructions to jump over, if the value
+        at the top of the stack evaluates to ``True``.  The stack is
+        not altered.
+
+        :param ctxt: The evaluation context.
+        """
+
+        if ctxt.stack[-1]:
+            super(JumpIf, self).__call__(ctxt)
+
+
+class JumpIfNot(Jump):
+    """
+    An instruction that causes a jump, conditional on the value on the
+    top of the stack.  The value is left on the stack.
+    """
+
+    def __call__(self, ctxt):
+        """
+        Evaluate this instruction.  Increments the program counter
+        step by the number of instructions to jump over, if the value
+        at the top of the stack evaluates to ``True``.  The stack is
+        not altered.
+
+        :param ctxt: The evaluation context.
+        """
+
+        if not ctxt.stack[-1]:
+            super(JumpIfNot, self).__call__(ctxt)
 
 
 class Constant(AbstractInstruction):

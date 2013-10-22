@@ -173,6 +173,85 @@ class TestInstructions(tests.TestCase):
         ])
 
 
+class TestJump(tests.TestCase):
+    def test_init(self):
+        jump = instructions.Jump(5)
+
+        self.assertEqual(jump.count, 5)
+
+    def test_repr(self):
+        jump = instructions.Jump(5)
+
+        self.assertEqual(repr(jump), "Jump(5)")
+
+    def test_call(self):
+        ctxt = mock.Mock(step=1)
+        jump = instructions.Jump(5)
+
+        jump(ctxt)
+
+        self.assertEqual(ctxt.step, 6)
+
+    def test_hash(self):
+        jump = instructions.Jump(5)
+
+        self.assertEqual(hash(jump),
+                         hash((instructions.Jump, 5)))
+
+    def test_eq(self):
+        class Jump2(instructions.Jump):
+            pass
+
+        jump1 = instructions.Jump(5)
+        jump2 = instructions.Jump(5)
+        jump3 = instructions.Jump(4)
+        jump4 = Jump2(5)
+
+        self.assertTrue(jump1.__eq__(jump2))
+        self.assertFalse(jump1.__eq__(jump3))
+        self.assertFalse(jump1.__eq__(jump4))
+
+
+class TestJumpIf(tests.TestCase):
+    def test_call_false(self):
+        ctxt = mock.Mock(step=1, stack=[''])
+        jump = instructions.JumpIf(5)
+
+        jump(ctxt)
+
+        self.assertEqual(ctxt.step, 1)
+        self.assertEqual(ctxt.stack, [''])
+
+    def test_call_true(self):
+        ctxt = mock.Mock(step=1, stack=['!'])
+        jump = instructions.JumpIf(5)
+
+        jump(ctxt)
+
+        self.assertEqual(ctxt.step, 6)
+        self.assertEqual(ctxt.stack, ['!'])
+
+
+class TestJumpIfNot(tests.TestCase):
+    def test_call_false(self):
+        ctxt = mock.Mock(step=1, stack=[''])
+        jump = instructions.JumpIfNot(5)
+
+        jump(ctxt)
+
+        self.assertEqual(ctxt.step, 6)
+        self.assertEqual(ctxt.stack, [''])
+
+    def test_call_true(self):
+        ctxt = mock.Mock(step=1, stack=['!'])
+        jump = instructions.JumpIfNot(5)
+
+        jump(ctxt)
+
+        self.assertEqual(ctxt.step, 1)
+        self.assertEqual(ctxt.stack, ['!'])
+
+
 class TestConstant(tests.TestCase):
     def test_init(self):
         constant = instructions.Constant('value')
