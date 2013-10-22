@@ -154,10 +154,15 @@ class TestParseRule(tests.TestCase):
         ('a >= b', Instructions([Ident('a'), Ident('b'), ge_op, set_authz])),
         ('a != b', Instructions([Ident('a'), Ident('b'), ne_op, set_authz])),
         ('a == b', Instructions([Ident('a'), Ident('b'), eq_op, set_authz])),
-        ('a and b', Instructions([Ident('a'), Ident('b'), and_op, set_authz])),
-        ('a or b', Instructions([Ident('a'), Ident('b'), or_op, set_authz])),
+        ('a and b', Instructions([
+            Ident('a'), JumpIfNot(2), pop, Ident('b'), set_authz,
+        ])),
+        ('a or b', Instructions([
+            Ident('a'), JumpIf(2), pop, Ident('b'), set_authz,
+        ])),
         ('a if b else c', Instructions([
-            Ident('b'), Ident('a'), Ident('c'), trinary_op, set_authz
+            Ident('b'), JumpIfNot(3), pop, Ident('a'), Jump(2), pop,
+            Ident('c'), set_authz,
         ])),
         ('a + b * c + d', Instructions([
             Ident('a'), Ident('b'), Ident('c'), mul_op, add_op, Ident('d'),

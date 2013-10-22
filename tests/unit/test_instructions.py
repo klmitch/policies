@@ -42,6 +42,11 @@ class Instruction2ForTest(InstructionForTest):
 
 
 class TestAbstractInstruction(tests.TestCase):
+    def test_len(self):
+        inst = InstructionForTest()
+
+        self.assertEqual(len(inst), 1)
+
     def test_eq(self):
         one = InstructionForTest()
         two = InstructionForTest()
@@ -74,6 +79,13 @@ class TestInstructions(tests.TestCase):
 
         self.assertEqual(insts.instructions, (1, 2, 3))
         mock_linearize.assert_called_once_with([3, 2, 1])
+
+    @mock.patch.object(instructions.Instructions, '_linearize',
+                       side_effect=lambda x: x)
+    def test_len(self, mock_linearize):
+        insts = instructions.Instructions([1, 2, 3])
+
+        self.assertEqual(len(insts), 3)
 
     @mock.patch.object(instructions.Instructions, '_linearize',
                        side_effect=lambda x: x)
@@ -513,51 +525,6 @@ class TestGenericOperator(tests.TestCase):
         op.assert_called_once_with(1, 2, 3)
 
 
-class TestTrinaryOperator(tests.TestCase):
-    def test_init(self):
-        trinary = instructions.TrinaryOperator()
-
-        self.assertEqual(trinary.count, 3)
-        self.assertEqual(trinary.opstr, 'if/else')
-
-    def test_op(self):
-        trinary = instructions.TrinaryOperator()
-
-        self.assertEqual(trinary.op(1, 'true', 'false'), 'true')
-        self.assertEqual(trinary.op(0, 'true', 'false'), 'false')
-
-    def test_fold_constant_true(self):
-        elems = [instructions.Constant(True), instructions.Ident('a'),
-                 instructions.Ident('b')]
-        trinary = instructions.TrinaryOperator()
-
-        result = trinary.fold(elems)
-
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result, [elems[1]])
-
-    def test_fold_constant_false(self):
-        elems = [instructions.Constant(False), instructions.Ident('a'),
-                 instructions.Ident('b')]
-        trinary = instructions.TrinaryOperator()
-
-        result = trinary.fold(elems)
-
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result, [elems[2]])
-
-    def test_fold_nonconstant(self):
-        elems = [instructions.Ident('a'), instructions.Constant('true'),
-                 instructions.Constant('false')]
-        trinary = instructions.TrinaryOperator()
-
-        result = trinary.fold(elems)
-
-        self.assertEqual(len(result), 1)
-        self.assertTrue(isinstance(result[0], instructions.Instructions))
-        self.assertEqual(result[0].instructions, tuple(elems + [trinary]))
-
-
 class TestSetOperator(tests.TestCase):
     def test_init(self):
         set_op = instructions.SetOperator(5)
@@ -709,6 +676,82 @@ class TestAuthorizationAttr(tests.TestCase):
         self.assertFalse(attr1.__eq__(attr4))
 
 
+class TestTrinaryOperator(tests.TestCase):
+    def test_fold_constant_true(self):
+        elems = [instructions.Constant(True), instructions.Ident('a'),
+                 instructions.Ident('b')]
+        trinary = instructions.TrinaryOperator()
+
+        result = trinary.fold(elems)
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result, [elems[1]])
+
+    def test_fold_constant_false(self):
+        elems = [instructions.Constant(False), instructions.Ident('a'),
+                 instructions.Ident('b')]
+        trinary = instructions.TrinaryOperator()
+
+        result = trinary.fold(elems)
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result, [elems[2]])
+
+    def test_fold_nonconstant(self):
+        elems = [instructions.Ident('a'), instructions.Constant('true'),
+                 instructions.Constant('false')]
+        trinary = instructions.TrinaryOperator()
+
+        result = trinary.fold(elems)
+
+        self.assertEqual(len(result), 1)
+        self.assertTrue(isinstance(result[0], instructions.Instructions))
+        self.assertEqual(result[0].instructions, (
+            elems[0], instructions.JumpIfNot(3), instructions.pop, elems[1],
+            instructions.Jump(2), instructions.pop, elems[2],
+        ))
+
+
+class TestAndOperator(tests.TestCase):
+    def test_fold_lhs_false(self):
+        elems = [instructions.Constant(0), instructions.Constant('rhs')]
+        and_op = instructions.AndOperator()
+
+        result = and_op.fold(elems)
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result, [elems[0]])
+
+    def test_fold_lhs_true(self):
+        elems = [instructions.Constant('lhs'), instructions.Constant('rhs')]
+        and_op = instructions.AndOperator()
+
+        result = and_op.fold(elems)
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result, [elems[1]])
+
+
+class TestOrOperator(tests.TestCase):
+    def test_fold_lhs_false(self):
+        elems = [instructions.Constant(0), instructions.Constant('rhs')]
+        or_op = instructions.OrOperator()
+
+        result = or_op.fold(elems)
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result, [elems[1]])
+
+    def test_fold_lhs_true(self):
+        elems = [instructions.Constant('lhs'), instructions.Constant('rhs')]
+        or_op = instructions.OrOperator()
+
+        result = or_op.fold(elems)
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result, [elems[0]])
+
+
 class TestInOperator(tests.TestCase):
     def test_op(self):
         exemplar = frozenset([1, 3, 5])
@@ -729,22 +772,6 @@ class TestNotInOperator(tests.TestCase):
         self.assertFalse(instructions.not_in_op.op(3, exemplar))
         self.assertTrue(instructions.not_in_op.op(4, exemplar))
         self.assertFalse(instructions.not_in_op.op(5, exemplar))
-
-
-class TestAndOperator(tests.TestCase):
-    def test_op(self):
-        self.assertEqual(instructions.and_op.op(False, False), False)
-        self.assertEqual(instructions.and_op.op(True, False), False)
-        self.assertEqual(instructions.and_op.op(False, True), False)
-        self.assertEqual(instructions.and_op.op(True, 'foo'), 'foo')
-
-
-class TestOrOperator(tests.TestCase):
-    def test_op(self):
-        self.assertEqual(instructions.or_op.op(False, False), False)
-        self.assertEqual(instructions.or_op.op('foo', False), 'foo')
-        self.assertEqual(instructions.or_op.op(False, 'foo'), 'foo')
-        self.assertEqual(instructions.or_op.op('foo', 'bar'), 'foo')
 
 
 class TestItemOperator(tests.TestCase):

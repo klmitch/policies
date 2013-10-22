@@ -46,6 +46,15 @@ class AbstractInstruction(object):
     context.
     """
 
+    def __len__(self):
+        """
+        Compute the number of contained instructions.
+
+        :returns: The number of instructions contained.
+        """
+
+        return 1
+
     def __ne__(self, other):
         """
         Compare two instructions for inequivalence.
@@ -125,6 +134,15 @@ class Instructions(AbstractInstruction):
 
         # Linearize the instructions into a flat tuple
         self.instructions = tuple(self._linearize(instructions))
+
+    def __len__(self):
+        """
+        Compute the number of contained instructions.
+
+        :returns: The number of instructions contained.
+        """
+
+        return len(self.instructions)
 
     def __repr__(self):
         """
@@ -533,7 +551,33 @@ class Ident(AbstractInstruction):
                 self.ident == other.ident)
 
 
-class Operator(AbstractInstruction):
+@six.add_metaclass(abc.ABCMeta)
+class AbstractOperator(object):
+    """
+    An operator is a class with a ``fold()`` method, which performs
+    constant folding.  Most operators are also instructions.
+    """
+
+    @abc.abstractmethod
+    def fold(self, elems):
+        """
+        Perform constant folding.  If the result of applying the
+        operator to the elements would be a fixed constant value,
+        returns the result of applying the operator to the operands.
+        Otherwise, returns an instance of ``Instructions`` containing
+        the instructions necessary to apply the operator.
+
+        :param elems: A list (or list-like object) containing the
+                      elements.
+
+        :returns: A list of one element, containing the instructions
+                  necessary to implement the operator.
+        """
+
+        pass  # pragma: nocover
+
+
+class Operator(AbstractInstruction, AbstractOperator):
     """
     An instruction that performs an operation on some elements of the
     evaluation context stack, replacing those elements with the return
@@ -602,17 +646,17 @@ class Operator(AbstractInstruction):
 
     def fold(self, elems):
         """
-        Perform constant folding.  If all the elements are constant,
-        then the operator is performed and the constant is folded.
+        Perform constant folding.  If the result of applying the
+        operator to the elements would be a fixed constant value,
+        returns the result of applying the operator to the operands.
+        Otherwise, returns an instance of ``Instructions`` containing
+        the instructions necessary to apply the operator.
 
         :param elems: A list (or list-like object) containing the
                       elements.
 
-        :returns: If all elements are instances of ``Constant``,
-                  returns a list of one element, which is the result
-                  of calling the operation on ``elems``.  Otherwise,
-                  returns a list composed of the elements of ``elems``
-                  plus this operator.
+        :returns: A list of one element, containing the instructions
+                  necessary to implement the operator.
         """
 
         # Are the elements constants?
@@ -684,61 +728,6 @@ class GenericOperator(Operator):
         """
 
         return self._op(*args)
-
-
-class TrinaryOperator(Operator):
-    """
-    An instruction that implements the trinary operation.  If the
-    conditional evaluates to ``True``, the ``if_true`` element is
-    returned, otherwise the ``if_false`` element is returned.  The
-    three elements are drawn from the stack in the indicated order.
-    """
-
-    def __init__(self):
-        """
-        Initialize a ``TrinaryOperator`` object.
-        """
-
-        super(TrinaryOperator, self).__init__(3, 'if/else')
-
-    def op(self, cond, if_true, if_false):
-        """
-        Implement the trinary operation.
-
-        :param cond: The conditional.
-        :param if_true: The value to return if the conditional
-                        evaluates to ``True``.
-        :param if_false: The value to return if the conditional
-                         evaluates to ``False``.
-
-        :returns: One of ``if_true`` or ``if_false``, depending on the
-                  boolean value of ``cond``.
-        """
-
-        return if_true if cond else if_false
-
-    def fold(self, elems):
-        """
-        Perform constant folding.  Unlike ``Operator.fold()``, the
-        only important operand for determining whether the expression
-        can be folded is the value of the conditional.  If it is a
-        constant value, then the trinary expression can be evaluated
-        immediately.
-
-        :param elems: A list (or list-like object) containing the
-                      elements.
-
-        :returns: If the first element is an instance of ``Constant``,
-                  returns either the second or third element,
-                  depending on the boolean value of the first element.
-                  Otherwise, returns a list composed of the elements
-                  of ``elems`` plus this operator.
-        """
-
-        if isinstance(elems[0], Constant):
-            return [elems[1] if elems[0].value else elems[2]]
-
-        return [Instructions(elems[:] + [self])]
 
 
 class SetOperator(Operator):
@@ -962,6 +951,95 @@ class AuthorizationAttr(AbstractInstruction):
                 self.attribute == other.attribute)
 
 
+class TrinaryOperator(AbstractOperator):
+    """
+    A special operator which is not an instruction.  This class
+    implements the trinary operator, which implements the
+    ``if``/``else`` operator.
+    """
+
+    def fold(self, elems):
+        """
+        Perform constant folding.  If the result of applying the
+        operator to the elements would be a fixed constant value,
+        returns the result of applying the operator to the operands.
+        Otherwise, returns an instance of ``Instructions`` containing
+        the instructions necessary to apply the operator.
+
+        :param elems: A list (or list-like object) containing the
+                      elements.
+
+        :returns: A list of one element, containing the instructions
+                  necessary to implement the operator.
+        """
+
+        cond, if_true, if_false = elems
+
+        if isinstance(cond, Constant):
+            return [if_true if cond.value else if_false]
+
+        return [Instructions([cond, JumpIfNot(len(if_true) + 2), pop, if_true,
+                              Jump(len(if_false) + 1), pop, if_false])]
+
+
+class AndOperator(AbstractOperator):
+    """
+    A special operator which is not an instruction.  This class
+    implements the ``and`` operator.
+    """
+
+    def fold(self, elems):
+        """
+        Perform constant folding.  If the result of applying the
+        operator to the elements would be a fixed constant value,
+        returns the result of applying the operator to the operands.
+        Otherwise, returns an instance of ``Instructions`` containing
+        the instructions necessary to apply the operator.
+
+        :param elems: A list (or list-like object) containing the
+                      elements.
+
+        :returns: A list of one element, containing the instructions
+                  necessary to implement the operator.
+        """
+
+        lhs, rhs = elems
+
+        if isinstance(lhs, Constant):
+            return [rhs if lhs.value else lhs]
+
+        return [Instructions([lhs, JumpIfNot(len(rhs) + 1), pop, rhs])]
+
+
+class OrOperator(object):
+    """
+    A special operator which is not an instruction.  This class
+    implements the ``or`` operator.
+    """
+
+    def fold(self, elems):
+        """
+        Perform constant folding.  If the result of applying the
+        operator to the elements would be a fixed constant value,
+        returns the result of applying the operator to the operands.
+        Otherwise, returns an instance of ``Instructions`` containing
+        the instructions necessary to apply the operator.
+
+        :param elems: A list (or list-like object) containing the
+                      elements.
+
+        :returns: A list of one element, containing the instructions
+                  necessary to implement the operator.
+        """
+
+        lhs, rhs = elems
+
+        if isinstance(lhs, Constant):
+            return [lhs if lhs.value else rhs]
+
+        return [Instructions([lhs, JumpIf(len(rhs) + 1), pop, rhs])]
+
+
 # The pop instruction
 pop = Pop()
 
@@ -994,8 +1072,8 @@ le_op = GenericOperator(2, operator.le, '<=')
 ge_op = GenericOperator(2, operator.ge, '>=')
 ne_op = GenericOperator(2, operator.ne, '!=')
 eq_op = GenericOperator(2, operator.eq, '==')
-and_op = GenericOperator(2, lambda x, y: x and y, 'and')
-or_op = GenericOperator(2, lambda x, y: x or y, 'or')
+and_op = AndOperator()
+or_op = OrOperator()
 item_op = GenericOperator(2, lambda x, y: x[y], '[]')
 
 # The trinary operator
