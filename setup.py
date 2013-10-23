@@ -31,7 +31,7 @@ def readfile(filename):
 
 setup(
     name='policies',
-    version='0.3.1',
+    version='0.4',
     author='Kevin L. Mitchell',
     author_email='klmitch@mit.edu',
     url='https://github.com/klmitch/policies',
@@ -39,13 +39,13 @@ setup(
     long_description=readfile('README.rst'),
     license='GNU General Public License v3 or later (GPLv3+)',
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: GNU General Public License v3 '
             'or later (GPLv3+)',
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.3',
         'Topic :: Security',
         'Topic :: Software Development :: Interpreters',
         'Topic :: Software Development :: Libraries',
