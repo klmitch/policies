@@ -446,7 +446,8 @@ class TestOperator(tests.TestCase):
         self.assertEqual(ctxt.stack, [1, 2, (3, 4, 5)])
 
     def test_hash(self):
-        op_func = lambda x: x
+        def op_func(x):
+            return x
         op = OperatorForTest(5, 'opstr')
 
         self.assertEqual(hash(op),
