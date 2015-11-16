@@ -180,8 +180,8 @@ In addition to the literal values mentioned above, the policy language
 also supports attribute reference, subscription (``x[index]``), and
 function calls.  Note that "slicing" (``x[index:index]``) is not
 supported, however.  Finally, all arithmetic, logical, and comparison
-operators are supported (albeit without short-circuiting), as is the
-Python "trinary" syntax (``a if b else c``).
+operators are supported, as is the Python "trinary" syntax (``a if b
+else c``).
 
 As an example, let's suppose that a particular rule is controlling
 update access to a user record.  The ``user`` variable will be the
@@ -210,6 +210,14 @@ group (see entrypoints_), which will then be available to policy
 rules.  This allows ultimate control over access control.  Note that
 only positional arguments can be passed to functions; keyword
 arguments are not available.
+
+Note that operator short-circuiting is implemented; that is, in an
+expression like ``user == target or user.admin``, if the ``user ==
+target`` clause evaluates to ``True``, then ``user.admin`` will not be
+evaluated.  This applies for the logical operators (``and`` and
+``or``), as well as in the "trinary" syntax.  Constant folding is also
+implemented, so rule text like ``5 + 23 > user.spam`` will only
+compute the operation ``5 + 23`` once, during rule parsing.
 
 Authorization Attributes
 ------------------------
